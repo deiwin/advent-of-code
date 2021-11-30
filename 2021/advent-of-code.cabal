@@ -1,0 +1,31 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: b72a6b7e49ae4896ad2d410a6154d5c284339aeb178fd386c02b10c385128079
+
+name:           advent-of-code
+version:        0.0.0
+build-type:     Simple
+
+library
+  exposed-modules:
+      DayXX
+  other-modules:
+      Paths_advent_of_code
+  hs-source-dirs:
+      ./.
+  default-extensions: BangPatterns LambdaCase PartialTypeSignatures RecordWildCards OverloadedStrings TupleSections
+  ghc-options: -W
+  build-depends:
+      HUnit
+    , array
+    , base >=4.7 && <5
+    , containers
+    , criterion
+    , linear
+    , megaparsec
+    , text
+  default-language: Haskell2010

@@ -1,0 +1,36 @@
+name: advent-of-code
+dependencies:
+- base >= 4.7 && < 5
+- HUnit
+- text
+- array
+- containers
+- megaparsec
+- linear
+- criterion
+
+ghc-options:
+- -W
+default-extensions:
+- BangPatterns
+- LambdaCase
+- PartialTypeSignatures
+- RecordWildCards
+- OverloadedStrings
+- TupleSections
+
+# - BlockArguments
+# - DataKinds
+# - DeriveGeneric
+# - FlexibleContexts
+# - GADTs
+# - PolyKinds
+# - RankNTypes
+# - ScopedTypeVariables
+# - TemplateHaskell
+# - TypeApplications
+# - TypeFamilies
+# - TypeOperators
+
+library:
+  source-dirs: .
