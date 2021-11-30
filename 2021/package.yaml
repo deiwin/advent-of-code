@@ -18,6 +18,7 @@ default-extensions:
 - RecordWildCards
 - OverloadedStrings
 - TupleSections
+- ScopedTypeVariables
 
 # - BlockArguments
 # - DataKinds

@@ -76,7 +76,7 @@ parse input = case P.parse parser "" input of
     spaceConsumer :: Parser ()
     spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
     lexeme = PL.lexeme spaceConsumer
-    symbol = PL.symbol spaceConsumer
+    string = PL.symbol spaceConsumer
     number = lexeme PL.decimal
     singleEol :: Parser (P.Tokens Text)
     singleEol = P.eol <* P.notFollowedBy P.eol
