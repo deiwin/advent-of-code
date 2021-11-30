@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b72a6b7e49ae4896ad2d410a6154d5c284339aeb178fd386c02b10c385128079
+-- hash: b284f6e46c73f03a0575cdd2e88e19b94f324229c4958f993f500f62a1ae5acb
 
 name:           advent-of-code
 version:        0.0.0
@@ -13,6 +13,7 @@ build-type:     Simple
 library
   exposed-modules:
       DayXX
+      Practice.Y2015D01
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
