@@ -66,25 +66,30 @@ import Prelude hiding (readFile)
 type Parser = P.Parsec Void Text
 
 parse :: Text -> _
-parse input = case P.parse parser "" input of
-  Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
-  Right result -> result
+parse input = run parser
   where
     parser = do
-      foo <- P.some P.letterChar
-      return foo
-    spaceConsumer :: Parser ()
-    spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
-    lexeme = PL.lexeme spaceConsumer
+      word <- P.some P.letterChar <* string ":" <* P.space
+      numbers <- number `P.sepEndBy1` P.space
+      return (word, numbers)
     string = PL.symbol spaceConsumer
     number = lexeme PL.decimal
+    lexeme = PL.lexeme spaceConsumer
+    spaceConsumer :: Parser ()
+    spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
     singleEol :: Parser (P.Tokens Text)
     singleEol = P.eol <* P.notFollowedBy P.eol
+    run p = case P.parse p "" input of
+      Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
+      Right result -> result
+
+solve1 :: _
+solve1 input = input
 
 main = do
   input <- readFile "inputs/DayXX.txt"
   -- exampleInput <- readFile "inputs/DayXX_example.txt"
-  print $ parse input
+  print $ solve1 $ parse input
   runTestTT $
     TestCase $ do
       1 @?= 2
