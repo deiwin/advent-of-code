@@ -1,4 +1,4 @@
-module DayXX (main) where
+module Day01 (main) where
 
 import Control.Applicative (empty)
 import Control.Arrow (second, (>>>))
@@ -65,26 +65,20 @@ import Prelude hiding (readFile)
 
 type Parser = P.Parsec Void Text
 
-parse :: Text -> _
-parse input = case P.parse parser "" input of
-  Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
-  Right result -> result
-  where
-    parser = do
-      foo <- P.some P.letterChar
-      return foo
-    spaceConsumer :: Parser ()
-    spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
-    lexeme = PL.lexeme spaceConsumer
-    string = PL.symbol spaceConsumer
-    number = lexeme PL.decimal
-    singleEol :: Parser (P.Tokens Text)
-    singleEol = P.eol <* P.notFollowedBy P.eol
+parse :: Text -> [Int]
+parse input = read . T.unpack <$> T.lines input
+
+solve :: _
+solve input = input
+              & zipWith (-) (tail input)
+              & filter (> 0)
+              & length
 
 main = do
-  input <- readFile "inputs/DayXX.txt"
-  -- exampleInput <- readFile "inputs/DayXX_example.txt"
-  print $ parse input
+  input <- readFile "inputs/Day01.txt"
+  -- exampleInput <- readFile "inputs/Day01_example.txt"
+  print $ solve $ parse input
+  print $ solve $ [199, 200, 208]
   runTestTT $
     TestCase $ do
       1 @?= 2
