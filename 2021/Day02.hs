@@ -94,12 +94,12 @@ parse input = run parser
       Right result -> result
 
 solve1 :: _
-solve1 input = mul $ foldl' f (V2 0 0) input
+solve1 input = mul $ fst $ foldl' f (V2 0 0, 0) input
   where
     mul (V2 x y) = x * y
-    f acc (Forward, amount) = acc + V2 amount 0
-    f acc (Down, amount) = acc + V2 0 amount
-    f acc (Up, amount) = acc - V2 0 amount
+    f (coord, aim) (Forward, x) = (coord + V2 x (aim * x), aim)
+    f (coord, aim) (Down, x) = (coord, aim + x)
+    f (coord, aim) (Up, x) = (coord, aim - x)
 
 main = do
   input <- readFile "inputs/Day02.txt"
