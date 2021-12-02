@@ -27,8 +27,8 @@ parse input = run parser
     parser = commandParser `P.sepEndBy1` P.space
     commandParser = do
       dir <- dirParser
-      numbers <- number
-      return (dir, numbers)
+      x <- number
+      return (dir, x)
     dirParser =
       Forward <$ string "forward"
         <|> Down <$ string "down"
