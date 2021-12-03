@@ -51,15 +51,15 @@ solve2 input = oxygenGenRating * coScrubRating
       | otherwise = False
     coScrubRatingF _ _ = undefined
     untilOne :: (Char -> (Int, Int) -> Bool) -> [[Char]] -> [Char]
-    untilOne = go 0
+    untilOne f binaries = go 0 (count binaries) f binaries
       where
-        go pos f binaries =
+        go pos counts f binaries =
           if length result == 1
             then head result
-            else go (pos + 1) f result
+            else go (pos + 1) (count result) f result
           where
             result = filter g binaries
-            g bits = f (bits !! pos) (count binaries !! pos)
+            g bits = f (bits !! pos) (counts !! pos)
 
 count :: [[Char]] -> [(Int, Int)]
 count input = foldl' f (replicate width startState) input
