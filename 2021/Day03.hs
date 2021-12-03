@@ -10,6 +10,9 @@ import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 import Prelude hiding (readFile)
 
+data CommonBit = Zero | One | Neither
+  deriving (Show, Eq)
+
 parse :: Text -> [[Char]]
 parse input = run parser
   where
@@ -23,34 +26,32 @@ solve1 input = gamma * epsilon
   where
     gamma = binaryToInt (toCommonBit <$> counts)
     epsilon = binaryToInt (toLeastCommonBit <$> counts)
-    toCommonBit (zeros, ones)
-      | zeros > ones = 0
-      | otherwise = 1
-    toLeastCommonBit (zeros, ones)
-      | zeros > ones = 1
-      | otherwise = 0
+    toCommonBit Zero = 0
+    toCommonBit _ = 1
+    toLeastCommonBit Zero = 1
+    toLeastCommonBit _ = 0
     counts = count input
 
 solve2 :: [[Char]] -> Int
 solve2 input = oxygenGenRating * coScrubRating
   where
     oxygenGenRating = strToInt $ untilOne oxygenGenRatingF input
-    oxygenGenRatingF '0' (zeros, ones)
-      | zeros > ones = True
-      | otherwise = False
-    oxygenGenRatingF '1' (zeros, ones)
-      | ones >= zeros = True
-      | otherwise = False
+    oxygenGenRatingF '0' Zero = True
+    oxygenGenRatingF '0' One = False
+    oxygenGenRatingF '0' Neither = False
+    oxygenGenRatingF '1' Zero = False
+    oxygenGenRatingF '1' One = True
+    oxygenGenRatingF '1' Neither = True
     oxygenGenRatingF _ _ = undefined
     coScrubRating = strToInt $ untilOne coScrubRatingF input
-    coScrubRatingF '0' (zeros, ones)
-      | zeros <= ones = True
-      | otherwise = False
-    coScrubRatingF '1' (zeros, ones)
-      | ones < zeros = True
-      | otherwise = False
+    coScrubRatingF '0' Zero = False
+    coScrubRatingF '0' One = True
+    coScrubRatingF '0' Neither = True
+    coScrubRatingF '1' Zero = True
+    coScrubRatingF '1' One = False
+    coScrubRatingF '1' Neither = False
     coScrubRatingF _ _ = undefined
-    untilOne :: (Char -> (Int, Int) -> Bool) -> [[Char]] -> [Char]
+    untilOne :: (Char -> CommonBit -> Bool) -> [[Char]] -> [Char]
     untilOne f binaries = go 0 (count binaries) f binaries
       where
         go pos counts f binaries =
@@ -61,9 +62,13 @@ solve2 input = oxygenGenRating * coScrubRating
             result = filter g binaries
             g bits = f (bits !! pos) (counts !! pos)
 
-count :: [[Char]] -> [(Int, Int)]
-count input = foldl' f (replicate width startState) input
+count :: [[Char]] -> [CommonBit]
+count input = toCommonBit <$> foldl' f (replicate width startState) input
   where
+    toCommonBit (zeros, ones)
+      | zeros > ones = Zero
+      | zeros < ones = One
+      | otherwise = Neither
     f acc bits = zipWith g acc bits
     g (zeros, ones) '1' = (zeros, ones + 1)
     g (zeros, ones) '0' = (zeros + 1, ones)
