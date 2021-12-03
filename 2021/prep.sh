@@ -11,7 +11,11 @@ if [ $# -eq 0 ]; then
 
   echo "Waiting for input .."
   mkdir -p inputs
-  aocdl -output "inputs/Day${day}.txt" -wait
+  if [ $(date '+%H') -gt 7 ]; then
+    aocdl -output "inputs/Day${day}.txt"
+  else
+    aocdl -output "inputs/Day${day}.txt" -wait
+  fi
 
   echo "Watching the main function .."
   ghcid --test='main' -W -c "stack ghci --ghc-options='-w' Day${day}.hs"
