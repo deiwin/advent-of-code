@@ -1,6 +1,7 @@
 module Day03 (main) where
 
 import Control.Category ((>>>))
+import Control.Monad (foldM)
 import qualified Data.Bits as B
 import Data.Function ((&))
 import Data.List (foldl')
@@ -49,15 +50,16 @@ solve2 input = oxygenGenRating * coScrubRating
     coScrubRatingF bit (Just commonBit) = B.xor bit commonBit
     coScrubRatingF bit Nothing = B.complement bit
     untilOne :: (Bit -> CommonBit -> Bool) -> [[Bit]] -> [Bit]
-    untilOne f binaries = go 0 (count binaries) f binaries
+    untilOne bitFilterF binaries =
+      foldM go (count binaries, binaries) [0 ..]
+        & either id undefined
       where
-        go pos counts f binaries =
-          if length result == 1
-            then head result
-            else go (pos + 1) (count result) f result
+        go (_, [binary]) _ = Left binary
+        go (counts, binaries) pos = Right (newCounts, newBinaries)
           where
-            result = filter g binaries
-            g bits = f (bits !! pos) (counts !! pos)
+            newCounts = count newBinaries
+            newBinaries = filter binaryFilterF binaries
+            binaryFilterF bits = bitFilterF (bits !! pos) (counts !! pos)
 
 count :: [[Bit]] -> [CommonBit]
 count input = toCommonBit <$> foldl' f (replicate width startState) input
