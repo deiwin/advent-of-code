@@ -85,11 +85,52 @@ solve1 input = gamma * epsilon
       | zeros > ones = 1
       | otherwise = 0
     counts = foldl' f (replicate width startState) input
-    f acc bits = zipWith g acc bits
-    g (zeros, ones) '1' = (zeros, ones + 1)
-    g (zeros, ones) '0' = (zeros + 1, ones)
-    g _ _ = undefined
-    startState = (0, 0)
+      where
+        f acc bits = zipWith g acc bits
+        g (zeros, ones) '1' = (zeros, ones + 1)
+        g (zeros, ones) '0' = (zeros + 1, ones)
+        g _ _ = undefined
+        startState = (0, 0)
+    width = length $ head input
+
+solve2 :: _
+solve2 input = oxygenGenRating * coScrubRating
+  where
+    oxygenGenRating = strToInt $ untilOne oxygenGenRatingF input
+    -- oxygenGenRatingF b c | traceShow (b, c) False = undefined
+    oxygenGenRatingF '0' (zeros, ones)
+      | zeros > ones = True
+      | otherwise = False
+    oxygenGenRatingF '1' (zeros, ones)
+      | ones >= zeros = True
+      | otherwise = False
+    oxygenGenRatingF _ _ = undefined
+    coScrubRating = strToInt $ untilOne coScrubRatingF input
+    coScrubRatingF '0' (zeros, ones)
+      | zeros <= ones = True
+      | otherwise = False
+    coScrubRatingF '1' (zeros, ones)
+      | ones < zeros = True
+      | otherwise = False
+    coScrubRatingF _ _ = undefined
+    untilOne :: (Char -> (Int, Int) -> Bool) -> [[Char]] -> [Char]
+    untilOne = go 0
+      where
+        -- go pos _ i | traceShow (pos, i) False = undefined
+        go pos f binaries =
+          if length result == 1
+            then head result
+            else go (pos + 1) f result
+          where
+            result = filter g binaries
+            g bits = f (bits !! pos) (counts binaries !! pos)
+    counts input = foldl' f (replicate width startState) input
+      where
+        f acc bits = zipWith g acc bits
+        g (zeros, ones) '1' = (zeros, ones + 1)
+        g (zeros, ones) '0' = (zeros + 1, ones)
+        g _ _ = undefined
+        startState = (0, 0)
     width = length $ head input
 
 binaryToInt :: [Int] -> Int
@@ -98,10 +139,14 @@ binaryToInt xs = go $ reverse xs
     go [] = 0
     go (x : xs) = x + 2 * go xs
 
+strToInt :: [Char] -> Int
+strToInt xs = binaryToInt (read . (: []) <$> xs)
+
 main = do
   input <- readFile "inputs/Day03.txt"
   exampleInput <- readFile "inputs/Day03_example.txt"
-  print $ solve1 $ parse input
+  print $ solve2 $ parse input
+  -- print $ solve2 $ parse exampleInput
   runTestTT $
     TestCase $ do
       1 @?= 2
