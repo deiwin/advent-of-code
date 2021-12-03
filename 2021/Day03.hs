@@ -4,7 +4,7 @@ import Control.Category ((>>>))
 import Control.Monad (foldM)
 import qualified Data.Bits as B
 import Data.Function ((&))
-import Data.List (foldl')
+import Data.List (foldl', transpose)
 import Data.Text (Text)
 import Data.Text.IO (readFile)
 import Data.Void (Void)
@@ -62,17 +62,13 @@ solve2 input = oxygenGenRating * coScrubRating
             binaryFilterF bits = bitFilterF (bits !! pos) (counts !! pos)
 
 count :: [[Bit]] -> [CommonBit]
-count input = toCommonBit <$> foldl' f (replicate width startState) input
+count = fmap commonBit . transpose
   where
-    toCommonBit (zeros, ones)
-      | zeros > ones = Just False
-      | zeros < ones = Just True
-      | otherwise = Nothing
-    f acc bits = zipWith g acc bits
-    g (zeros, ones) True = (zeros, ones + 1)
-    g (zeros, ones) False = (zeros + 1, ones)
-    startState = (0, 0)
-    width = length $ head input
+    commonBit bits
+      | countOnes bits * 2 > length bits = Just True
+      | countOnes bits * 2 == length bits = Nothing
+      | otherwise = Just False
+    countOnes = length . filter id
 
 fromBits :: [Bit] -> Int
 fromBits =
