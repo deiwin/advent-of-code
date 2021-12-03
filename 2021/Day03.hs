@@ -1,5 +1,8 @@
 module Day03 (main) where
 
+import Control.Category ((>>>))
+import qualified Data.Bits as B
+import Data.Function ((&))
 import Data.List (foldl')
 import Data.Text (Text)
 import Data.Text.IO (readFile)
@@ -10,48 +13,42 @@ import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 import Prelude hiding (readFile)
 
-data CommonBit = Zero | One | Neither
-  deriving (Show, Eq)
+type Bit = Bool
 
-parse :: Text -> [[Char]]
+type CommonBit = Maybe Bit
+
+parse :: Text -> [[Bit]]
 parse input = run parser
   where
-    parser = P.some P.digitChar `P.sepEndBy1` P.space
+    parser = P.some bit `P.sepEndBy1` P.space
+    bit =
+      False <$ P.char '0'
+        P.<|> True <$ P.char '1'
     run p = case P.parse p "" input of
       Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
       Right result -> result
 
-solve1 :: [[Char]] -> Int
+solve1 :: [[Bit]] -> Int
 solve1 input = gamma * epsilon
   where
-    gamma = binaryToInt (toCommonBit <$> counts)
-    epsilon = binaryToInt (toLeastCommonBit <$> counts)
-    toCommonBit Zero = 0
-    toCommonBit _ = 1
-    toLeastCommonBit Zero = 1
-    toLeastCommonBit _ = 0
+    gamma = fromBits (toCommonBit <$> counts)
+    epsilon = fromBits (toLeastCommonBit <$> counts)
+    toCommonBit (Just bit) = bit
+    toCommonBit Nothing = undefined
+    toLeastCommonBit (Just bit) = B.complement bit
+    toLeastCommonBit Nothing = undefined
     counts = count input
 
-solve2 :: [[Char]] -> Int
+solve2 :: [[Bit]] -> Int
 solve2 input = oxygenGenRating * coScrubRating
   where
-    oxygenGenRating = strToInt $ untilOne oxygenGenRatingF input
-    oxygenGenRatingF '0' Zero = True
-    oxygenGenRatingF '0' One = False
-    oxygenGenRatingF '0' Neither = False
-    oxygenGenRatingF '1' Zero = False
-    oxygenGenRatingF '1' One = True
-    oxygenGenRatingF '1' Neither = True
-    oxygenGenRatingF _ _ = undefined
-    coScrubRating = strToInt $ untilOne coScrubRatingF input
-    coScrubRatingF '0' Zero = False
-    coScrubRatingF '0' One = True
-    coScrubRatingF '0' Neither = True
-    coScrubRatingF '1' Zero = True
-    coScrubRatingF '1' One = False
-    coScrubRatingF '1' Neither = False
-    coScrubRatingF _ _ = undefined
-    untilOne :: (Char -> CommonBit -> Bool) -> [[Char]] -> [Char]
+    oxygenGenRating = fromBits $ untilOne oxygenGenRatingF input
+    oxygenGenRatingF bit (Just commonBit) = B.complement $ B.xor bit commonBit
+    oxygenGenRatingF bit Nothing = bit
+    coScrubRating = fromBits $ untilOne coScrubRatingF input
+    coScrubRatingF bit (Just commonBit) = B.xor bit commonBit
+    coScrubRatingF bit Nothing = B.complement bit
+    untilOne :: (Bit -> CommonBit -> Bool) -> [[Bit]] -> [Bit]
     untilOne f binaries = go 0 (count binaries) f binaries
       where
         go pos counts f binaries =
@@ -62,28 +59,26 @@ solve2 input = oxygenGenRating * coScrubRating
             result = filter g binaries
             g bits = f (bits !! pos) (counts !! pos)
 
-count :: [[Char]] -> [CommonBit]
+count :: [[Bit]] -> [CommonBit]
 count input = toCommonBit <$> foldl' f (replicate width startState) input
   where
     toCommonBit (zeros, ones)
-      | zeros > ones = Zero
-      | zeros < ones = One
-      | otherwise = Neither
+      | zeros > ones = Just False
+      | zeros < ones = Just True
+      | otherwise = Nothing
     f acc bits = zipWith g acc bits
-    g (zeros, ones) '1' = (zeros, ones + 1)
-    g (zeros, ones) '0' = (zeros + 1, ones)
-    g _ _ = undefined
+    g (zeros, ones) True = (zeros, ones + 1)
+    g (zeros, ones) False = (zeros + 1, ones)
     startState = (0, 0)
     width = length $ head input
 
-binaryToInt :: [Int] -> Int
-binaryToInt xs = go $ reverse xs
-  where
-    go [] = 0
-    go (x : xs) = x + 2 * go xs
-
-strToInt :: [Char] -> Int
-strToInt xs = binaryToInt (read . (: []) <$> xs)
+fromBits :: [Bit] -> Int
+fromBits =
+  reverse
+    >>> zip [0 ..]
+    >>> filter snd -- Filter out all False (or 0) bits
+    >>> fmap fst -- Keep the index (from [0..]) of the remaining True (or 1) bits
+    >>> foldl' B.setBit 0
 
 main = do
   input <- readFile "inputs/Day03.txt"
