@@ -44,6 +44,8 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.IO (readFile)
+import Data.Vector.Unboxed (Vector)
+import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import Debug.Trace
   ( traceShow,

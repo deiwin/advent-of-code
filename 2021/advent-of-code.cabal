@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2e2fa6f92020d718e427449e55ae115fa5d5b1e64af087d18aca91f4055b8396
+-- hash: 17cdc360db30d9a87b4a90724203a99f617961858e890e746184346070327e05
 
 name:           advent-of-code
 version:        0.0.0
@@ -20,6 +20,7 @@ library
       Practice.Y2016D01
       Practice.Y2017D01
       Practice.Y2019D01
+      Practice.Y2019D02
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
@@ -35,4 +36,5 @@ library
     , linear
     , megaparsec
     , text
+    , vector
   default-language: Haskell2010
