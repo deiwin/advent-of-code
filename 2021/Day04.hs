@@ -109,6 +109,13 @@ solve1 input =
     & L.minimumBy (comparing (length . calledNumbers))
     & score
 
+solve2 :: _
+solve2 input =
+  boards input
+    & mapMaybe (boardScore (drawNumbers input))
+    & L.maximumBy (comparing (length . calledNumbers))
+    & score
+
 boardScore :: [Int] -> Board -> Maybe BoardScore
 boardScore drawNumbers rows = do
   calledNumbers <- calledNumbersM
@@ -135,11 +142,7 @@ lineCalledNumbers drawNumbers line = do
 main = do
   input <- readFile "inputs/Day04.txt"
   exampleInput <- readFile "inputs/Day04_example.txt"
-  print $ solve1 $ parse exampleInput
-  print $
-    lineCalledNumbers
-      [7, 4, 9, 5, 11, 17, 23, 2, 0, 14, 21, 24, 10, 16, 13, 6, 15, 25, 12, 22, 18, 20, 8, 19, 3, 26, 1]
-      [14, 21, 17, 24, 4]
+  print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 4512
