@@ -35,17 +35,19 @@ parse :: Text -> Input
 parse input = run parser
   where
     parser = do
-      drawNumbers <- number `P.sepEndBy1` P.char ',' <* P.space
-      boards <- boardP `P.sepEndBy1` P.space
+      drawNumbers <- number `P.sepBy1` P.char ',' <* P.space
+      boards <- boardP `lazySepBy1` P.space
       return Input {..}
-    boardP = rowP `P.sepBy1` P.try singleEol
-    rowP = P.space *> P.some number
+    boardP = rowP `lazySepBy1` (P.eol *> P.many (P.char ' '))
+    rowP = P.some number
+    lazySepBy1 p sep = do
+      first <- p
+      rest <- P.many (P.try (sep *> p))
+      return (first : rest)
     number = lexeme PL.decimal
     lexeme = PL.lexeme spaceConsumer
     spaceConsumer :: Parser ()
     spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
-    singleEol :: Parser (P.Tokens Text)
-    singleEol = P.eol <* P.notFollowedBy P.eol
     run p = case P.parse p "" input of
       Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
       Right result -> result

@@ -81,6 +81,10 @@ parse input = run parser
     spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
     singleEol :: Parser (P.Tokens Text)
     singleEol = P.eol <* P.notFollowedBy P.eol
+    lazySepBy1 p sep = do
+      first <- p
+      rest <- P.many (P.try (sep *> p))
+      return (first:rest)
     run p = case P.parse p "" input of
       Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
       Right result -> result
