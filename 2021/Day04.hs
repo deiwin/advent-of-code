@@ -1,21 +1,13 @@
 module Day04 (main) where
 
-import Control.Applicative (empty)
+import qualified Data.Char as C
 import Data.Function ((&))
 import qualified Data.List as L
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Ord (comparing)
-import Data.Text (Text)
-import Data.Text.IO (readFile)
-import Data.Void (Void)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Char as P
-import qualified Text.Megaparsec.Char.Lexer as PL
-import Prelude hiding (readFile)
-
-type Parser = P.Parsec Void Text
+import qualified Text.ParserCombinators.ReadP as P
 
 type Board = [[Int]]
 
@@ -31,26 +23,24 @@ data BoardScore = BoardScore
   }
   deriving (Show, Eq)
 
-parse :: Text -> Input
-parse input = run parser
+parse :: String -> Input
+parse input = run $ do
+  drawNumbers <- numberList <* P.count 2 eol
+  boards <- board `P.sepBy1` P.count 2 eol
+  eol *> P.eof
+  return Input {..}
   where
-    parser = do
-      drawNumbers <- number `P.sepBy1` P.char ',' <* P.space
-      boards <- boardP `lazySepBy1` P.space
-      return Input {..}
-    boardP = rowP `lazySepBy1` (P.eol *> P.many (P.char ' '))
-    rowP = P.some number
-    lazySepBy1 p sep = do
-      first <- p
-      rest <- P.many (P.try (sep *> p))
-      return (first : rest)
-    number = lexeme PL.decimal
-    lexeme = PL.lexeme spaceConsumer
-    spaceConsumer :: Parser ()
-    spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
-    run p = case P.parse p "" input of
-      Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
-      Right result -> result
+    board = row `P.sepBy1` eol
+    row = P.optional spaces *> number `P.sepBy1` spaces
+    numberList = number `P.sepBy1` P.char ','
+    -- Standard parsers
+    number :: P.ReadP Int
+    number = read <$> P.munch1 C.isDigit
+    spaces = P.many1 (P.char ' ')
+    eol = P.char '\n'
+    run p = fullMatch $ P.readP_to_S p input
+    fullMatch :: [(a, [b])] -> a
+    fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: Input -> Int
 solve1 input =

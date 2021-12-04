@@ -1,6 +1,6 @@
 module DayXX (main) where
 
-import Control.Applicative (empty)
+import Control.Applicative (empty, (<|>))
 import Control.Arrow (second, (>>>))
 import Control.Monad (guard)
 import Criterion.Main
@@ -10,6 +10,7 @@ import Criterion.Main
   )
 import Data.Array.IArray (Array)
 import qualified Data.Array.IArray as A
+import qualified Data.Char as C
 import Data.Function ((&))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
@@ -30,6 +31,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe
   ( catMaybes,
+    fromJust,
     isJust,
   )
 import Data.Ord (comparing)
@@ -41,9 +43,6 @@ import Data.Sequence
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Set as S
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Text.IO (readFile)
 import Data.Vector.Unboxed (Vector)
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
@@ -54,40 +53,28 @@ import Debug.Trace
 import Linear.V2 (V2 (..))
 import Linear.V3 (V3 (..))
 import Linear.V4 (V4 (..))
-import Test.HUnit.Base
-  ( Test (TestCase),
-    (@?=),
-  )
+import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import Text.Megaparsec ((<|>))
-import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Char as P
-import qualified Text.Megaparsec.Char.Lexer as PL
-import Prelude hiding (readFile)
+import qualified Text.ParserCombinators.ReadP as P
 
-type Parser = P.Parsec Void Text
-
-parse :: Text -> _
-parse input = run parser
+parse :: String -> _
+parse input = run $ do
+  word <- P.many1 letter <* P.char ':' <* eol
+  numbers <- number `P.sepBy1` spaces
+  -- eol *> P.eof
+  return (word, numbers)
   where
-    parser = do
-      word <- P.some P.letterChar <* string ":" <* P.space
-      numbers <- number `P.sepEndBy1` P.space
-      return (word, numbers)
-    string = PL.symbol spaceConsumer
-    number = lexeme PL.decimal
-    lexeme = PL.lexeme spaceConsumer
-    spaceConsumer :: Parser ()
-    spaceConsumer = PL.space (P.skipSome (P.char ' ')) empty empty
-    singleEol :: Parser (P.Tokens Text)
-    singleEol = P.eol <* P.notFollowedBy P.eol
-    lazySepBy1 p sep = do
-      first <- p
-      rest <- P.many (P.try (sep *> p))
-      return (first:rest)
-    run p = case P.parse p "" input of
-      Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
-      Right result -> result
+    -- Standard parsers
+    letter = P.satisfy C.isLetter
+    number :: P.ReadP Int
+    number = read <$> P.munch1 C.isDigit
+    spaces = P.many1 (P.char ' ')
+    eol = P.char '\n'
+    run p = longestMatch $ P.readP_to_S p input
+    longestMatch :: [(a, [b])] -> (a, [b])
+    longestMatch = L.minimumBy (comparing (length . snd))
+    fullMatch :: [(a, [b])] -> a
+    fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: _
 solve1 input = input
