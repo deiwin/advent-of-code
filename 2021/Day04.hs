@@ -1,66 +1,15 @@
 module Day04 (main) where
 
 import Control.Applicative (empty)
-import Control.Arrow (second, (>>>))
-import Control.Monad (guard, liftM)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
 import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
 import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    isJust,
-    mapMaybe,
-  )
+import Data.Maybe (mapMaybe)
 import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
 import Data.Text (Text)
-import qualified Data.Text as T
 import Data.Text.IO (readFile)
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
-import Test.HUnit.Base
-  ( Test (TestCase),
-    (@?=),
-  )
+import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 import qualified Text.Megaparsec.Char.Lexer as PL
@@ -87,7 +36,6 @@ parse input = run parser
   where
     parser = do
       drawNumbers <- number `P.sepEndBy1` P.char ',' <* P.space
-      -- row <- boardP
       boards <- boardP `P.sepEndBy1` P.space
       return Input {..}
     boardP = rowP `P.sepBy1` P.try singleEol
@@ -102,14 +50,14 @@ parse input = run parser
       Left bundle -> error (P.errorBundlePretty (bundle :: P.ParseErrorBundle Text Void))
       Right result -> result
 
-solve1 :: _
+solve1 :: Input -> Int
 solve1 input =
   boards input
     & mapMaybe (boardScore (drawNumbers input))
     & L.minimumBy (comparing (length . calledNumbers))
     & score
 
-solve2 :: _
+solve2 :: Input -> Int
 solve2 input =
   boards input
     & mapMaybe (boardScore (drawNumbers input))
@@ -131,19 +79,19 @@ boardScore drawNumbers rows = do
     lastCalledNumber calledNumbers = L.last calledNumbers
 
 lineCalledNumbers :: [Int] -> [Int] -> Maybe [Int]
-lineCalledNumbers drawNumbers line = do
-  i <-
-    L.scanl' eliminate line drawNumbers
-      & L.findIndex L.null
-  return $ take i drawNumbers
+lineCalledNumbers drawNumbers line =
+  L.scanl' eliminate line drawNumbers
+    & L.findIndex L.null
+    & fmap (`take` drawNumbers)
   where
     eliminate xs x = filter (/= x) xs
 
 main = do
   input <- readFile "inputs/Day04.txt"
   exampleInput <- readFile "inputs/Day04_example.txt"
-  print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 4512
       solve1 (parse input) @?= 16674
+      solve2 (parse exampleInput) @?= 1924
+      solve2 (parse input) @?= 7075
