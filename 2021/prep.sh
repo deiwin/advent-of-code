@@ -11,7 +11,7 @@ if [ $# -eq 0 ]; then
 
   echo "Waiting for input .."
   mkdir -p inputs
-  if [ $(date '+%H') -gt 7 ]; then
+  if [ $(date '+%H') -ge 7 ]; then
     aocdl -output "inputs/Day${day}.txt"
   else
     aocdl -output "inputs/Day${day}.txt" -wait
