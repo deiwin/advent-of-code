@@ -43,21 +43,20 @@ solve1 input =
     & M.fromListWith (+)
     & M.filter (> 1)
     & M.size
+  where
+    isHOrV x = isHorizontal x || isVertical x
+    isHorizontal (V2 x1 _, V2 x2 _) = x1 == x2
+    isVertical (V2 _ y1, V2 _ y2) = y1 == y2
 
 solve2 :: [Line] -> Int
 solve2 input =
   input
     & fmap sort
-    & concatMap specialRange
+    & concatMap diagonalRange
     & flip zip (repeat 1)
     & M.fromListWith (+)
     & M.filter (> 1)
     & M.size
-
-specialRange :: Line -> [V2 Int]
-specialRange line
-  | isHOrV line = range line
-  | otherwise = diagonalRange line
 
 diagonalRange :: Line -> [V2 Int]
 diagonalRange (from@(V2 x1 y1), to@(V2 x2 y2)) =
@@ -75,12 +74,6 @@ sort (from, to)
   | from < to = (from, to)
   | otherwise = (to, from)
 
-isHOrV :: Line -> Bool
-isHOrV x = isHorizontal x || isVertical x
-  where
-    isHorizontal (V2 x1 _, V2 x2 _) = x1 == x2
-    isVertical (V2 _ y1, V2 _ y2) = y1 == y2
-
 main = do
   input <- readFile "inputs/Day05.txt"
   exampleInput <- readFile "inputs/Day05_example.txt"
@@ -89,8 +82,8 @@ main = do
       range (V2 950 698, V2 597 698) @?= []
       (range (V2 597 698, V2 950 698) /= []) @?= True
       (V2 597 698 < V2 950 698) @?= True
-      specialRange (V2 1 1, V2 3 3) @?= [V2 1 1, V2 2 2, V2 3 3]
-      specialRange (sort (V2 9 7, V2 7 9)) @?= [V2 7 9, V2 8 8, V2 9 7]
+      diagonalRange (V2 1 1, V2 3 3) @?= [V2 1 1, V2 2 2, V2 3 3]
+      diagonalRange (sort (V2 9 7, V2 7 9)) @?= [V2 7 9, V2 8 8, V2 9 7]
       solve1 (parse input) @?= 7269
       solve2 (parse exampleInput) @?= 12
       solve2 (parse input) @?= 21140
