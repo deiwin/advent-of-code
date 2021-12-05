@@ -1,5 +1,6 @@
 module Day05 (main) where
 
+import Control.Category ((>>>))
 import qualified Data.Char as C
 import Data.Function ((&))
 import Data.Ix (inRange, range)
@@ -39,10 +40,7 @@ solve1 input =
     & filter isHOrV
     & fmap sort
     & concatMap range
-    & flip zip (repeat 1)
-    & M.fromListWith (+)
-    & M.filter (> 1)
-    & M.size
+    & countRepeatingPoints
   where
     isHOrV x = isHorizontal x || isVertical x
     isHorizontal (V2 x1 _, V2 x2 _) = x1 == x2
@@ -53,10 +51,14 @@ solve2 input =
   input
     & fmap sort
     & concatMap diagonalRange
-    & flip zip (repeat 1)
-    & M.fromListWith (+)
-    & M.filter (> 1)
-    & M.size
+    & countRepeatingPoints
+
+countRepeatingPoints :: [V2 Int] -> Int
+countRepeatingPoints =
+  flip zip (repeat 1)
+    >>> M.fromListWith (+)
+    >>> M.filter (> 1)
+    >>> M.size
 
 diagonalRange :: Line -> [V2 Int]
 diagonalRange (from@(V2 x1 y1), to@(V2 x2 y2)) =
