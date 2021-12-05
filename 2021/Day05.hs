@@ -49,7 +49,6 @@ solve1 input =
 solve2 :: [Line] -> Int
 solve2 input =
   input
-    & fmap sort
     & concatMap diagonalRange
     & countRepeatingPoints
 
@@ -86,6 +85,7 @@ main = do
       (V2 597 698 < V2 950 698) @?= True
       diagonalRange (V2 1 1, V2 3 3) @?= [V2 1 1, V2 2 2, V2 3 3]
       diagonalRange (sort (V2 9 7, V2 7 9)) @?= [V2 7 9, V2 8 8, V2 9 7]
+      diagonalRange (V2 9 7, V2 7 9) @?= [V2 9 7, V2 8 8, V2 7 9]
       solve1 (parse input) @?= 7269
       solve2 (parse exampleInput) @?= 12
       solve2 (parse input) @?= 21140
