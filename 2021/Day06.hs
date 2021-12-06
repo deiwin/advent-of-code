@@ -77,6 +77,15 @@ solve1 input =
     & (L.!! 80)
     & IM.foldl' (+) 0
 
+solve2 :: _
+solve2 input =
+  input
+    & flip zip (repeat 1)
+    & IM.fromListWith (+)
+    & iterate playRound
+    & (L.!! 256)
+    & IM.foldl' (+) 0
+
 playRound :: IntMap Int -> _
 playRound state =
   state
@@ -90,7 +99,7 @@ playRound state =
 main = do
   input <- readFile "inputs/Day06.txt"
   -- exampleInput <- readFile "inputs/Day06_example.txt"
-  print $ solve1 $ parse input
+  print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       solve1 [3,4,3,1,2]  @?= 5934
