@@ -78,7 +78,7 @@ solve2 :: [Int] -> Int
 solve2 input = minimum (flip cost input <$> range)
   where
     cost midPoint = sum . fmap (newCost . abs . (midPoint -))
-    newCost x = sum [1..x]
+    newCost x = ((1 + x) * x) `div` 2
     range = [(minimum input)..(maximum input)]
 
 main = do
