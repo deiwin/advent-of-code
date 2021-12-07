@@ -68,23 +68,13 @@ parse input = run $ number `P.sepBy1` P.char ',' <* eol <* P.eof
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: [Int] -> _
+solve1 :: [Int] -> Int
 solve1 input = minimum (flip cost input <$> range)
-  -- input
-  --   & fmap (abs . (midPoint -))
-  --   & sum
   where
     cost midPoint = sum . fmap (abs . (midPoint -))
     range = [(minimum input)..(maximum input)]
-    -- midPoint :: _
-    -- midPoint = (fromIntegral (sum input) / fromIntegral (length input))
-    -- midPoint = round $ fst $ L.foldl' f (head doubleInput, 1) (tail doubleInput)
-    -- f :: (Double, Double) -> Double -> (Double, Double)
-    -- f (avg, count) x = (((avg + (x / count)) / 2) , count + 1)
-    -- doubleInput :: [Double]
-    -- doubleInput = fromIntegral <$> input
 
-solve2 :: [Int] -> _
+solve2 :: [Int] -> Int
 solve2 input = minimum (flip cost input <$> range)
   where
     cost midPoint = sum . fmap (newCost . abs . (midPoint -))
@@ -93,10 +83,7 @@ solve2 input = minimum (flip cost input <$> range)
 
 main = do
   input <- readFile "inputs/Day07.txt"
-  -- exampleInput <- readFile "inputs/Day07_example.txt"
-  print $ solve2 $ parse input
-  print $ solve2 [16,1,2,0,4,2,7,1,2,14]
   runTestTT $
     TestCase $ do
       solve1 (parse input) @?= 344297
-      1 @?= 1
+      solve2 (parse input) @?= 97164301
