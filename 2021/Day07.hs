@@ -10,17 +10,33 @@ parse :: Text -> [Int]
 parse input = read . unpack <$> splitOn "," input
 
 solve1 :: [Int] -> Int
-solve1 input = minimum (flip cost input <$> range)
+solve1 = bSearch cost
   where
-    cost midPoint = sum . fmap (abs . (midPoint -))
-    range = [(minimum input) .. (maximum input)]
+    cost to = sum . fmap (abs . (to -))
 
 solve2 :: [Int] -> Int
-solve2 input = minimum (flip cost input <$> range)
+solve2 = bSearch cost
   where
-    cost midPoint = sum . fmap (newCost . abs . (midPoint -))
+    cost to = sum . fmap (newCost . abs . (to -))
     newCost x = ((1 + x) * x) `div` 2
-    range = [(minimum input) .. (maximum input)]
+
+bSearch :: (Int -> [Int] -> Int) -> [Int] -> Int
+bSearch costF input = cost $ go (min, max)
+  where
+    (min, max) = (minimum input, maximum input)
+    cost = flip costF input
+    go (low, high)
+      | low == high || high < low = low
+      | otherwise = go (newLow, newHigh)
+      where
+        (newLow, newHigh) = case costs of
+          [prev, this, next]
+            | this < prev && this < next -> (mid, mid)
+            | prev < this -> (low, mid)
+            | otherwise -> (mid, high)
+          _ -> undefined
+        costs = cost . (+ mid) <$> [-1, 0, 1]
+        mid = low + ((high - low) `div` 2)
 
 main = do
   input <- readFile "inputs/Day07.txt"
