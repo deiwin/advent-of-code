@@ -84,14 +84,19 @@ solve1 input = minimum (flip cost input <$> range)
     -- doubleInput :: [Double]
     -- doubleInput = fromIntegral <$> input
 
+solve2 :: [Int] -> _
+solve2 input = minimum (flip cost input <$> range)
+  where
+    cost midPoint = sum . fmap (newCost . abs . (midPoint -))
+    newCost x = sum [1..x]
+    range = [(minimum input)..(maximum input)]
+
 main = do
   input <- readFile "inputs/Day07.txt"
   -- exampleInput <- readFile "inputs/Day07_example.txt"
-  print $ solve1 $ parse input
-  print $ solve1 [16,1,2,0,4,2,7,1,2,14]
-  print $ sum [16,1,2,0,4,2,7,1,2,14]
-  print $ (sum [16,1,2,0,4,2,7,1,2,14] `div` length [16,1,2,0,4,2,7,1,2,14])
+  print $ solve2 $ parse input
+  print $ solve2 [16,1,2,0,4,2,7,1,2,14]
   runTestTT $
     TestCase $ do
-      1 @?= 2
+      solve1 (parse input) @?= 344297
       1 @?= 1
