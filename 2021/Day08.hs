@@ -1,18 +1,19 @@
 module Day08 (main) where
 
-import Control.Arrow (first, second, (>>>))
+import Control.Arrow (second, (>>>))
 import qualified Data.Char as C
 import Data.Function ((&))
 import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
+import Data.Set (Set)
 import qualified Data.Set as S
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
 
-type Entry = ([String], [String])
+type Entry = ([Set Char], [Set Char])
 
 parse :: String -> [Entry]
 parse input = run $ entry `P.endBy1` eol <* P.eof
@@ -21,7 +22,7 @@ parse input = run $ entry `P.endBy1` eol <* P.eof
       signal <- pattern `P.sepBy1` spaces <* P.string " | "
       output <- pattern `P.sepBy1` spaces
       return (signal, output)
-    pattern = P.many1 letter
+    pattern = S.fromList <$> P.many1 letter
     -- Standard parsers
     letter = P.satisfy C.isLetter
     spaces = P.many1 (P.char ' ')
@@ -56,22 +57,21 @@ toInt =
     >>> sum
 
 deduceNumbers :: Entry -> [Int]
-deduceNumbers (signal, output) = (map M.!) . S.fromList <$> output
+deduceNumbers (signal, output) = (map M.!) <$> output
   where
     map =
-      [ (c0, 0),
-        (c1, 1),
-        (c2, 2),
-        (c3, 3),
-        (c4, 4),
-        (c5, 5),
-        (c6, 6),
-        (c7, 7),
-        (c8, 8),
-        (c9, 9)
-      ]
-        & fmap (first S.fromList)
-        & M.fromList
+      M.fromList
+        [ (c0, 0),
+          (c1, 1),
+          (c2, 2),
+          (c3, 3),
+          (c4, 4),
+          (c5, 5),
+          (c6, 6),
+          (c7, 7),
+          (c8, 8),
+          (c9, 9)
+        ]
     c1 = uniqueCardinalityNr 1
     c4 = uniqueCardinalityNr 4
     c7 = uniqueCardinalityNr 7
@@ -79,7 +79,7 @@ deduceNumbers (signal, output) = (map M.!) . S.fromList <$> output
     c235 = cardinalityNr 2
     [c3] = filter (includes c1) c235
     c25 = c235 L.\\ [c3]
-    [c5] = filter (L.null . (L.\\ c6)) c25
+    [c5] = filter (L.null . (S.\\ c6)) c25
     [c2] = c25 L.\\ [c5]
     c069 = cardinalityNr 0
     [c6] = filter (not . includes c1) c069
@@ -90,7 +90,7 @@ deduceNumbers (signal, output) = (map M.!) . S.fromList <$> output
         & L.find ((== length (canonicalNames M.! x)) . length)
         & fromJust
     cardinalityNr x = filter ((== length (canonicalNames M.! x)) . length) signal
-    includes xs inYs = (xs `L.intersect` inYs) == xs
+    includes xs inYs = (xs `S.intersection` inYs) == xs
 
 canonicalNames :: Map Int String
 canonicalNames =
