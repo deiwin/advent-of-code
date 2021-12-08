@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if [ $# -eq 0 ]; then
-  day="$(date '+%d' | xargs printf '%02d')"
+  day="$(date '+%d' | sed 's/^0*//' | xargs printf '%02d')"
 
   echo "Creating code file ..."
   cp DayXX.hs "Day${day}.hs"
