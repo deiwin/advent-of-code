@@ -51,26 +51,27 @@ solve2 input =
 toInt :: [Int] -> Int
 toInt =
   reverse
-    >>> zip [0 ..]
-    >>> fmap (uncurry (*) . first (10 ^))
+    >>> zip ((10 ^) <$> [0 ..])
+    >>> fmap (uncurry (*))
     >>> sum
 
 deduceNumbers :: Entry -> [Int]
 deduceNumbers (signal, output) = (map M.!) . S.fromList <$> output
   where
     map =
-      M.fromList
-        [ (S.fromList c0, 0),
-          (S.fromList c1, 1),
-          (S.fromList c2, 2),
-          (S.fromList c3, 3),
-          (S.fromList c4, 4),
-          (S.fromList c5, 5),
-          (S.fromList c6, 6),
-          (S.fromList c7, 7),
-          (S.fromList c8, 8),
-          (S.fromList c9, 9)
-        ]
+      [ (c0, 0),
+        (c1, 1),
+        (c2, 2),
+        (c3, 3),
+        (c4, 4),
+        (c5, 5),
+        (c6, 6),
+        (c7, 7),
+        (c8, 8),
+        (c9, 9)
+      ]
+        & fmap (first S.fromList)
+        & M.fromList
     c1 = uniqueCardinalityNr 1
     c4 = uniqueCardinalityNr 4
     c7 = uniqueCardinalityNr 7
