@@ -107,6 +107,7 @@ solve2 input =
             allNewVisited = visited `S.union` S.fromList newVisited
             newVisited =
               toVisit
+                & filter matching
                 & fmap snd
             matching (from, to)
               | to `S.member` visited = False
