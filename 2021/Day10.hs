@@ -1,70 +1,17 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Day10 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
-import Control.Monad (guard)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
-import qualified Data.Char as C
-import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
-import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
-import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
-import Test.HUnit.Base (Test (TestCase), (@?=))
-import Test.HUnit.Text (runTestTT)
-import qualified Text.ParserCombinators.ReadP as P
 import Control.Monad (foldM)
 import Data.Either (lefts, rights)
+import Data.Function ((&))
+import Data.List (foldl')
+import qualified Data.List as L
+import Test.HUnit.Base (Test (TestCase), (@?=))
+import Test.HUnit.Text (runTestTT)
 
-parse :: String -> _
+parse :: String -> [String]
 parse = lines
 
-solve1 :: _
+solve1 :: [String] -> Int
 solve1 input =
   input
     & fmap execute
@@ -72,11 +19,12 @@ solve1 input =
     & fmap toScore
     & sum
   where
-    toScore ']' = 57
-    toScore ')' = 3
-    toScore '}' = 1197
-    toScore '>' = 25137
-    toScore _ = undefined
+    toScore = \case
+      ']' -> 57
+      ')' -> 3
+      '}' -> 1197
+      '>' -> 25137
+      _ -> undefined
 
 execute :: String -> Either Char String
 execute = foldM go ""
@@ -85,18 +33,19 @@ execute = foldM go ""
     go [] c
       | isOpenChar c = Right [c]
       | otherwise = Left c
-    go s@(first:rest) c
-      | isOpenChar c = Right (c:s)
+    go s@(first : rest) c
+      | isOpenChar c = Right (c : s)
       | first == toOpenChar c = Right rest
       | otherwise = Left c
     isOpenChar c = c `elem` ['[', '(', '{', '<']
-    toOpenChar ']' = '['
-    toOpenChar ')' = '('
-    toOpenChar '}' = '{'
-    toOpenChar '>' = '<'
-    toOpenChar _ = undefined
+    toOpenChar = \case
+      ']' -> '['
+      ')' -> '('
+      '}' -> '{'
+      '>' -> '<'
+      _ -> undefined
 
-solve2 :: [String] -> _
+solve2 :: [String] -> Int
 solve2 input =
   input
     & fmap execute
@@ -105,27 +54,28 @@ solve2 input =
     & L.sort
     & middle
   where
-    middle l = head $ drop (length l `div` 2) l
+    middle l = l !! (length l `div` 2)
     score = foldl' score' 0
     score' acc c = (5 * acc) + toScore c
-    toCloseChar '[' = ']'
-    toCloseChar '(' = ')'
-    toCloseChar '{' = '}'
-    toCloseChar '<' = '>'
-    toCloseChar _ = undefined
-    toScore ')' = 1
-    toScore ']' = 2
-    toScore '}' = 3
-    toScore '>' = 4
-    toScore _ = undefined
-
+    toCloseChar = \case
+      '[' -> ']'
+      '(' -> ')'
+      '{' -> '}'
+      '<' -> '>'
+      _ -> undefined
+    toScore = \case
+      ')' -> 1
+      ']' -> 2
+      '}' -> 3
+      '>' -> 4
+      _ -> undefined
 
 main = do
   input <- readFile "inputs/Day10.txt"
   exampleInput <- readFile "inputs/Day10_example.txt"
-  print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 26397
       solve1 (parse input) @?= 392139
-      1 @?= 288957
+      solve2 (parse exampleInput) @?= 288957
+      solve2 (parse input) @?= 4001832844
