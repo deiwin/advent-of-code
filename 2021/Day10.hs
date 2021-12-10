@@ -50,24 +50,18 @@ solve2 input =
   input
     & fmap execute
     & rights
-    & fmap (score . fmap toCloseChar)
+    & fmap (score . fmap toScore)
     & L.sort
     & middle
   where
     middle l = l !! (length l `div` 2)
     score = foldl' score' 0
-    score' acc c = (5 * acc) + toScore c
-    toCloseChar = \case
-      '[' -> ']'
-      '(' -> ')'
-      '{' -> '}'
-      '<' -> '>'
-      _ -> undefined
+    score' acc x = (5 * acc) + x
     toScore = \case
-      ')' -> 1
-      ']' -> 2
-      '}' -> 3
-      '>' -> 4
+      '(' -> 1
+      '[' -> 2
+      '{' -> 3
+      '<' -> 4
       _ -> undefined
 
 main = do
