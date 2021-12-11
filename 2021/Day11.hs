@@ -6,7 +6,6 @@ import Data.Array.IArray (Array)
 import qualified Data.Array.IArray as A
 import Data.Function ((&))
 import Data.Ix (inRange, rangeSize)
-import Data.List (foldl')
 import qualified Data.List as L
 import Data.Maybe (fromMaybe, isNothing)
 import Linear.V2 (V2 (..))
@@ -21,12 +20,14 @@ parse :: String -> [[Int]]
 parse = fmap (fmap (read . (: []))) . lines
 
 solve1 :: [[Int]] -> Int
-solve1 input = fst $ playNRounds 100 array
+solve1 input =
+  (0, array)
+    & iterate (playRound . snd)
+    & drop 1
+    & take 100
+    & fmap fst
+    & sum
   where
-    playNRounds n arr = foldl' go (0, arr) [1 .. n]
-      where
-        go (x, arr) _ = case playRound arr of
-          (y, newArr) -> (x + y, newArr)
     array :: Array (V2 Int) Octopus
     array = A.listArray bounds (Just <$> concat input)
     bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
