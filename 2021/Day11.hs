@@ -21,11 +21,9 @@ parse = fmap (fmap (read . (: []))) . lines
 
 solve1 :: [[Int]] -> Int
 solve1 input =
-  (0, array)
-    & iterate (playRound . snd)
-    & drop 1
+  array
+    & L.unfoldr (Just . playRound)
     & take 100
-    & fmap fst
     & sum
   where
     array :: Array (V2 Int) Octopus
@@ -34,9 +32,10 @@ solve1 input =
 
 solve2 :: [[Int]] -> Maybe Int
 solve2 input =
-  (0, array)
-    & iterate (playRound . snd)
-    & L.findIndex ((== rangeSize bounds) . fst)
+  array
+    & L.unfoldr (Just . playRound)
+    & L.elemIndex (rangeSize bounds)
+    & fmap (+ 1)
   where
     array :: Array (V2 Int) Octopus
     array = A.listArray bounds (Just <$> concat input)
