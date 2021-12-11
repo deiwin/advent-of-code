@@ -22,6 +22,7 @@ import qualified Data.IntSet as IS
 import Data.Ix
   ( inRange,
     range,
+    rangeSize
   )
 import Data.List
   ( foldl',
@@ -78,53 +79,64 @@ solve1 input = fst $ playNRounds 100 array
       where
         go (x, arr) _ = case playRound arr of
                           (y, newArr) -> (x + y, newArr)
-    playRound :: Grid -> (Int, Grid)
-    playRound arr = (resetCount, resetArr)
-      where
-        resetCount =
-          flashedArr
-            & A.assocs
-            & filter (isNothing . snd)
-            & length
-        resetArr :: Grid
-        resetArr = A.amap (Just . fromMaybe 0) flashedArr
-        flashedArr :: Grid
-        flashedArr = converge flash increasedArr
-        flash :: Grid -> Grid
-        flash arr =
-          arr
-            & (A.// toFlash)
-            & flip (A.accum (liftM2 (+))) toIncrease
-          where
-            toFlash :: [(V2 Int, Octopus)]
-            toFlash =
-              A.assocs arr
-                & filter (maybe False (> 9) . snd)
-                & fmap (second (const Nothing))
-            toIncrease :: [(V2 Int, Octopus)]
-            toIncrease =
-              toFlash
-                & concatMap (surrounding . fst)
-                & flip zip (repeat (Just 1))
-        increasedArr =
-          range (A.bounds arr)
-            & flip zip (repeat (Just 1))
-            & A.accum (liftM2 (+)) arr
-    surrounding coord =
-      [ V2 (-1) 0,
-        V2 1 0,
-        V2 0 (-1),
-        V2 0 1,
-        V2 1 1,
-        V2 (-1) 1,
-        V2 1 (-1),
-        V2 (-1) (-1)
-      ]
-        & fmap (+ coord)
-        & filter (inRange bounds)
     array :: Array (V2 Int) Octopus
     array = A.listArray bounds (Just <$> concat input)
     bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
+
+solve2 :: _
+solve2 input =
+  (0, array)
+    & iterate (playRound . snd)
+    & L.findIndex ((== rangeSize bounds) . fst)
+  where
+    array :: Array (V2 Int) Octopus
+    array = A.listArray bounds (Just <$> concat input)
+    bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
+
+playRound :: Grid -> (Int, Grid)
+playRound arr = (resetCount, resetArr)
+  where
+    resetCount =
+      flashedArr
+        & A.assocs
+        & filter (isNothing . snd)
+        & length
+    resetArr :: Grid
+    resetArr = A.amap (Just . fromMaybe 0) flashedArr
+    flashedArr :: Grid
+    flashedArr = converge flash increasedArr
+    flash :: Grid -> Grid
+    flash arr =
+      arr
+        & (A.// toFlash)
+        & flip (A.accum (liftM2 (+))) toIncrease
+      where
+        toFlash :: [(V2 Int, Octopus)]
+        toFlash =
+          A.assocs arr
+            & filter (maybe False (> 9) . snd)
+            & fmap (second (const Nothing))
+        toIncrease :: [(V2 Int, Octopus)]
+        toIncrease =
+          toFlash
+            & concatMap (surrounding arr . fst)
+            & flip zip (repeat (Just 1))
+    increasedArr =
+      range (A.bounds arr)
+        & flip zip (repeat (Just 1))
+        & A.accum (liftM2 (+)) arr
+surrounding arr coord =
+  [ V2 (-1) 0,
+    V2 1 0,
+    V2 0 (-1),
+    V2 0 1,
+    V2 1 1,
+    V2 (-1) 1,
+    V2 1 (-1),
+    V2 (-1) (-1)
+  ]
+    & fmap (+ coord)
+    & filter (inRange (A.bounds arr))
 
 converge :: Eq a => (a -> a) -> a -> a
 converge = until =<< ((==) =<<)
@@ -132,9 +144,9 @@ converge = until =<< ((==) =<<)
 main = do
   input <- readFile "inputs/Day11.txt"
   exampleInput <- readFile "inputs/Day11_example.txt"
-  print $ solve1 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 1656
       solve1 (parse input) @?= 1661
-      1 @?= 1
+      solve2 (parse exampleInput) @?= Just 195
+      solve2 (parse input) @?= Just 334
