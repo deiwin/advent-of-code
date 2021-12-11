@@ -1,6 +1,6 @@
 module Day11 (main) where
 
-import Control.Arrow (second)
+import Control.Arrow (second, (>>>))
 import Control.Monad (liftM2)
 import Data.Array.IArray (Array)
 import qualified Data.Array.IArray as A
@@ -20,26 +20,20 @@ parse :: String -> [[Int]]
 parse = fmap (fmap (read . (: []))) . lines
 
 solve1 :: [[Int]] -> Int
-solve1 input =
-  array
-    & L.unfoldr (Just . playRound)
-    & take 100
-    & sum
-  where
-    array :: Array (V2 Int) Octopus
-    array = A.listArray bounds (Just <$> concat input)
-    bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
+solve1 =
+  buildGrid
+    >>> L.unfoldr (Just . playRound)
+    >>> take 100
+    >>> sum
 
 solve2 :: [[Int]] -> Maybe Int
 solve2 input =
   array
     & L.unfoldr (Just . playRound)
-    & L.elemIndex (rangeSize bounds)
+    & L.elemIndex (rangeSize (A.bounds array))
     & fmap (+ 1)
   where
-    array :: Array (V2 Int) Octopus
-    array = A.listArray bounds (Just <$> concat input)
-    bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
+    array = buildGrid input
 
 playRound :: Grid -> (Int, Grid)
 playRound arr = (resetCount, resetArr)
@@ -74,20 +68,17 @@ playRound arr = (resetCount, resetArr)
 
 surrounding :: Grid -> V2 Int -> [V2 Int]
 surrounding arr coord =
-  [ V2 (-1) 0,
-    V2 1 0,
-    V2 0 (-1),
-    V2 0 1,
-    V2 1 1,
-    V2 (-1) 1,
-    V2 1 (-1),
-    V2 (-1) (-1)
-  ]
+  [V2 y x | x <- [-1, 0, 1], y <- [-1, 0, 1], x /= 0 || y /= 0]
     & fmap (+ coord)
     & filter (inRange (A.bounds arr))
 
 converge :: Eq a => (a -> a) -> a -> a
 converge = until =<< ((==) =<<)
+
+buildGrid :: [[Int]] -> Grid
+buildGrid input = A.listArray bounds (Just <$> concat input)
+  where
+    bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
 
 main = do
   input <- readFile "inputs/Day11.txt"
