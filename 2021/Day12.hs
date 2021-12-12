@@ -1,6 +1,6 @@
 module Day12 (main) where
 
-import Control.Arrow (second)
+import Control.Arrow (second, (>>>))
 import qualified Data.Char as C
 import Data.Function ((&))
 import qualified Data.List as L
@@ -35,16 +35,21 @@ parse input = run (edge `P.endBy1` eol <* P.eof)
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: [Edge] -> Int
-solve1 input = length $ dffWith visitable graph
+solve1 =
+  mkGraph
+    >>> dffWith visitable
+    >>> length
   where
-    visitable visited toVisit
-      | all C.isUpper toVisit = True
-      | toVisit `M.member` visited = False
-      | otherwise = True
-    graph = mkGraph input
+    visitable visited toVisit = isBigCave || canVisitSmallCave
+      where
+        isBigCave = all C.isUpper toVisit
+        canVisitSmallCave = not (toVisit `M.member` visited)
 
 solve2 :: [Edge] -> Int
-solve2 input = length $ dffWith visitable graph
+solve2 =
+  mkGraph
+    >>> dffWith visitable
+    >>> length
   where
     visitable visited toVisit = isBigCave || canVisitSmallCave
       where
@@ -59,7 +64,6 @@ solve2 input = length $ dffWith visitable graph
             & M.filterWithKey (\k _ -> all C.isLower k)
             & M.filter (> 1)
             & M.null
-    graph = mkGraph input
 
 dffWith :: (Visited -> String -> Bool) -> Graph -> [Visited]
 dffWith visitable = go "start" M.empty
