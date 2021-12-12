@@ -64,15 +64,15 @@ solve2 input = length $ dffWith visitable graph
 dffWith :: (Visited -> String -> Bool) -> Graph -> [Visited]
 dffWith visitable = go "start" M.empty
   where
-    go from@"end" visited _ = [M.insertWith (+) from 1 visited]
-    go from visited graph = concatMap (\to -> go to newVisited graph) toVisit
+    go from visited graph
+      | from == "end" = [newVisited]
+      | otherwise = concatMap (\to -> go to newVisited graph) toVisit
       where
         newVisited = M.insertWith (+) from 1 visited
         toVisit =
           from
             & (graph M.!)
-            & S.toList
-            & filter (visitable newVisited)
+            & S.filter (visitable newVisited)
 
 mkGraph :: [Edge] -> Graph
 mkGraph input =
