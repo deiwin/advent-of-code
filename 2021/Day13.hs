@@ -51,21 +51,13 @@ solve2 input = foldl' fold dotSet (snd input)
     dotSet = S.fromList (fst input)
 
 fold :: Set (V2 Int) -> (Dim, Int) -> Set (V2 Int)
-fold dotSet foldInstruction = S.map toNew dotSet
-  where
-    toNew c@(V2 y x)
-      | shouldFoldY = V2 (foldWith y) x
-      | shouldFoldX = V2 y (foldWith x)
-      | otherwise = c
-      where
-        foldWith real = foldPoint - (real - foldPoint)
-        foldPoint = snd foldInstruction
-        shouldFoldY =
-          fst foldInstruction == Y
-            && y > foldPoint
-        shouldFoldX =
-          fst foldInstruction == X
-            && x > foldPoint
+fold dotSet (X, fp) = S.map (\(V2 y x) -> V2 y (foldWith fp x)) dotSet
+fold dotSet (Y, fp) = S.map (\(V2 y x) -> V2 (foldWith fp y) x) dotSet
+
+foldWith :: Int -> Int -> Int
+foldWith foldPoint real
+  | real > foldPoint = foldPoint - (real - foldPoint)
+  | otherwise = real
 
 showGrid :: Set (V2 Int) -> String
 showGrid dotSet =
