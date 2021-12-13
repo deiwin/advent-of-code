@@ -67,7 +67,7 @@ showGrid dotSet =
     & unlines
   where
     showDot c
-      | c `S.member` dotSet = '#'
+      | c `S.member` dotSet = '█'
       | otherwise = ' '
     equalYs (V2 y1 _) (V2 y2 _) = y1 == y2
     bounds = (V2 0 0, V2 yMax xMax)
@@ -85,5 +85,17 @@ main = do
     TestCase $ do
       solve1 (parse exampleInput) @?= 17
       solve1 (parse input) @?= 704
-  putStrLn $ showGrid $ solve2 $ parse exampleInput
-  putStrLn $ showGrid $ solve2 $ parse input
+      showGrid (solve2 (parse exampleInput))
+        @?= "█████\n\
+            \█   █\n\
+            \█   █\n\
+            \█   █\n\
+            \█████\n"
+      showGrid (solve2 (parse input))
+        @?= "█  █  ██   ██    ██ ███  ████ █  █  ██ \n\
+            \█  █ █  █ █  █    █ █  █ █    █  █ █  █\n\
+            \████ █    █  █    █ ███  ███  ████ █   \n\
+            \█  █ █ ██ ████    █ █  █ █    █  █ █   \n\
+            \█  █ █  █ █  █ █  █ █  █ █    █  █ █  █\n\
+            \█  █  ███ █  █  ██  ███  ████ █  █  ██ \n"
+
