@@ -34,7 +34,7 @@ import Data.Maybe
     fromJust,
     isJust,
   )
-import Data.Ord (comparing)
+import Data.Ord (comparing, Ordering (..))
 import Data.Sequence
   ( Seq (..),
     (<|),
@@ -62,7 +62,7 @@ data Dim = X | Y
 
 type Bounds = (V2 Int, V2 Int)
 
-parse :: String -> _
+parse :: String -> ([V2 Int], [(Dim, Int)])
 parse input = run $ do
   dots <- dot `P.endBy1` eol <* eol
   folds <- fold `P.endBy1` eol
@@ -89,8 +89,14 @@ parse input = run $ do
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
+solve1 :: ([V2 Int], [(Dim, Int)]) -> Int
 solve1 input = S.size $ fold dotSet (head (snd input))
+  where
+    dotSet :: Set (V2 Int)
+    dotSet = S.fromList (fst input)
+
+solve2 :: ([V2 Int], [(Dim, Int)]) -> _
+solve2 input = foldl' fold dotSet (snd input)
   where
     dotSet :: Set (V2 Int)
     dotSet = S.fromList (fst input)
@@ -101,8 +107,8 @@ boundsFor dotSet = (V2 0 0, V2 yMax xMax)
     dotList = S.toList dotSet
     xMax = maximum (getX <$> dotList)
     yMax = maximum (getY <$> dotList)
-    getX (V2 _ x) = x
-    getY (V2 y _) = y
+getX (V2 _ x) = x
+getY (V2 y _) = y
 
 fold :: Set (V2 Int) -> (Dim, Int) -> Set (V2 Int)
 fold dotSet foldInstruction = S.map toNew dotSet
@@ -124,10 +130,24 @@ fold dotSet foldInstruction = S.map toNew dotSet
     bounds = boundsFor dotSet
     (_, V2 maxY maxX) = bounds
 
+showGrid :: Set (V2 Int) -> _
+showGrid dotSet =
+  range bounds
+    & L.groupBy equalYs
+    & fmap (fmap showDot)
+    & unlines
+  where
+    showDot c
+      | c `S.member` dotSet = '#'
+      | otherwise = ' '
+    equalYs (V2 y1 _) (V2 y2 _) = y1 == y2
+    bounds = boundsFor dotSet
+
 main = do
   input <- readFile "inputs/Day13.txt"
   exampleInput <- readFile "inputs/Day13_example.txt"
-  print $ solve1 $ parse input
+  -- print $ showGrid $ solve2 $ parse exampleInput
+  putStrLn $ showGrid $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 17
