@@ -28,7 +28,6 @@ parse input = run $ do
       dim <- read . (: []) . C.toUpper <$> letter
       a <- P.char '=' *> number
       return (dim, a)
-    -- dim = `
     dot = do
       x <- number <* P.char ','
       y <- number
