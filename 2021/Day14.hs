@@ -50,9 +50,7 @@ solve2 (polymer, ruleL) =
     & score
 
 score :: Map a Int -> Int
-score polymerM = maximum polymerL - minimum polymerL
-  where
-    polymerL = snd <$> M.toList polymerM
+score polymerM = maximum polymerM - minimum polymerM
 
 playNRounds :: [Rule] -> Int -> String -> Map Char Int
 playNRounds ruleL n polymer =
