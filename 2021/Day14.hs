@@ -38,10 +38,16 @@ parse input = run $ do
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: (String, [Rule]) -> Int
-solve1 (polymer, ruleL) = score (playNRounds ruleL 10 polymer)
+solve1 (polymer, ruleL) =
+  polymer
+    & playNRounds ruleL 10
+    & score
 
 solve2 :: (String, [Rule]) -> Int
-solve2 (polymer, ruleL) = score (playNRounds ruleL 40 polymer)
+solve2 (polymer, ruleL) =
+  polymer
+    & playNRounds ruleL 40
+    & score
 
 score :: Map a Int -> Int
 score polymerM = maximum polymerL - minimum polymerL
