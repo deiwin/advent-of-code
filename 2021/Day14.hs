@@ -1,8 +1,11 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Day14 (main) where
 
 import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
+import Control.Arrow (first, second, (>>>))
 import Control.Monad (guard)
+import Control.Monad.Memo (MonadMemo, for2, memo, runMemo)
 import Criterion.Main
   ( bench,
     defaultMain,
@@ -11,7 +14,7 @@ import Criterion.Main
 import Data.Array.IArray (Array)
 import qualified Data.Array.IArray as A
 import qualified Data.Char as C
-import Data.Function ((&))
+import Data.Function (fix, (&))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.IntSet (IntSet)
@@ -61,6 +64,9 @@ type Rule = ((Char, Char), Char)
 
 type Rules = Map (Char, Char) Char
 
+type Cache = Map (Int, (Char, Char)) (Map Char Integer)
+
+
 parse :: String -> (String, [Rule])
 parse input = run $ do
   template <- P.many1 letter <* P.count 2 eol
@@ -79,19 +85,56 @@ parse input = run $ do
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
-solve1 (polymer, rules) =
-  polymer
-    & iterate (playRound (M.fromList rules))
-    & (L.!! 10)
-    & flip zip (repeat 1)
-    & M.fromListWith (+)
-    & score
-  where
-    score polymerM = maximum polymerL - minimum polymerL
-      where
-        polymerL = snd <$> M.toList polymerM
+solve1 :: (String, [Rule]) -> Integer
+solve1 (polymer, ruleL) = score (playNRounds ruleL 10 polymer)
 
+solve2 :: _
+solve2 (polymer, ruleL) = score (playNRounds ruleL 40 polymer)
+
+score :: Map a Integer -> Integer
+score polymerM = maximum polymerL - minimum polymerL
+  where
+    polymerL = snd <$> M.toList polymerM
+
+playNRounds :: [Rule] -> Int -> String -> Map Char Integer
+playNRounds ruleL n polymer =
+  pairs
+    & foldl' go (M.empty, M.empty)
+    & fst
+    & M.unionWith (+) corrections
+  where
+    rules = M.fromList ruleL
+    corrections =
+      middles
+        & flip zip (repeat (-1))
+        & M.fromListWith (+)
+    middles =
+      pairs
+        & drop 1
+        & fmap fst
+    pairs = zip polymer (drop 1 polymer)
+    go (acc, cache) p =
+      playN n p cache
+        & first (M.unionWith (+) acc)
+    playN :: Int -> (Char, Char) -> Cache -> (Map Char Integer, Cache)
+    playN n p cache = runMemo (playNMemo n p) cache
+    playNMemo ::
+      MonadMemo (Int, (Char, Char)) (Map Char Integer) m =>
+      Int ->
+      (Char, Char) ->
+      m (Map Char Integer)
+    playNMemo 0 (a, b) = return (M.fromListWith (+) (zip [a, b] (repeat 1)))
+    playNMemo n (a, b) =
+      case M.lookup (a, b) rules of
+        Nothing -> recurse 0 (a, b)
+        Just c -> do
+          aM <- recurse (n - 1) (a, c)
+          bM <- recurse (n - 1) (c, b)
+          M.unionWith (+) aM bM
+            & M.adjust (\x -> x - 1) c
+            & return
+      where
+        recurse = for2 memo playNMemo
 
 -- The head and drop 1 are necessary for avoiding duplicates. Could use a
 -- special kind of concat instead but :shrug:
@@ -104,8 +147,9 @@ playRound rules polymer = head polymer : concatMap (drop 1 . maybeInsert) pairs
 main = do
   input <- readFile "inputs/Day14.txt"
   exampleInput <- readFile "inputs/Day14_example.txt"
-  print $ solve1 $ parse exampleInput
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 1588
       solve1 (parse input) @?= 2435
+      solve2 (parse exampleInput) @?= 2188189693529
+      solve2 (parse input) @?= 2587447599164

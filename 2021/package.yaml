@@ -9,6 +9,7 @@ dependencies:
 - megaparsec
 - linear
 - criterion
+- monad-memo
 
 ghc-options:
 - -W
