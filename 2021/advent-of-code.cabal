@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8d22a13a936457bf2742438c763691d4be9682bc8c4872e150de7252e1ae72c0
+-- hash: 411295f69a62ea54a1d00f7f3a974acd0653831730fc65589621fb71617a4c5a
 
 name:           advent-of-code
 version:        0.0.0
@@ -48,6 +48,7 @@ library
     , linear
     , megaparsec
     , monad-memo
+    , pqueue
     , text
     , vector
   default-language: Haskell2010

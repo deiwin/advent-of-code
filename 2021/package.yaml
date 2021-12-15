@@ -10,6 +10,7 @@ dependencies:
 - linear
 - criterion
 - monad-memo
+- pqueue
 
 ghc-options:
 - -W
