@@ -23,30 +23,33 @@ data Packet = Packet
   deriving (Eq, Show)
 
 parse :: String -> Packet
-parse input = fst $ run packet
+parse = run packetP . hexToBinary
   where
-    packet = do
-      version <- binaryN 3
-      packetType <- binaryN 3
-      value <-
-        case packetType of
-          4 -> literal
-          _ -> operator
-      return Packet {..}
-    operator :: P.ReadP PacketValue
+    run p = fst . longestMatch . P.readP_to_S p
+    longestMatch = L.minimumBy (comparing (length . snd))
+
+packetP :: P.ReadP Packet
+packetP = do
+  version <- binaryN 3
+  packetType <- binaryN 3
+  value <-
+    case packetType of
+      4 -> literal
+      _ -> operator
+  return Packet {..}
+  where
     operator = bitLengthOperator <|> subCountOperator
     bitLengthOperator = do
       P.char '0'
       bitLength <- binaryN 15
       bits <- P.count bitLength bit
       return (Container (manyPacketsFull bits))
-    manyPacketsFull = fullMatch . P.readP_to_S (P.many packet)
+    manyPacketsFull = fullMatch . P.readP_to_S (P.many packetP)
     subCountOperator = do
       P.char '1'
       subCount <- binaryN 11
-      packets <- P.count subCount packet
+      packets <- P.count subCount packetP
       return (Container packets)
-    literal :: P.ReadP PacketValue
     literal = do
       firsts <- P.many (P.char '1' *> P.count 4 bit)
       last <- P.char '0' *> P.count 4 bit
@@ -54,18 +57,16 @@ parse input = fst $ run packet
     binaryN :: Int -> P.ReadP Int
     binaryN n = readBinary <$> P.count n bit
     readBinary = fullMatch . N.readInt 2 C.isDigit (read . (: []))
-    bit :: P.ReadP Char
     bit = P.satisfy C.isDigit
+
+hexToBinary :: String -> String
+hexToBinary hexString = concatMap (printf "%04b") ints
+  where
     ints :: [Int]
-    ints = fullMatch . readHex . (: []) <$> input
-    binaryString :: String
-    binaryString = concatMap (printf "%04b") ints
-    -- Standard parsers
-    run p = longestMatch $ P.readP_to_S p binaryString
-    longestMatch :: [(a, [b])] -> (a, [b])
-    longestMatch = L.minimumBy (comparing (length . snd))
-    fullMatch :: [(a, [b])] -> a
-    fullMatch = fst . fromJust . L.find (L.null . snd)
+    ints = fullMatch . readHex . (: []) <$> hexString
+
+fullMatch :: [(a, [b])] -> a
+fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: Packet -> Int
 solve1 input = sum $ versions input
