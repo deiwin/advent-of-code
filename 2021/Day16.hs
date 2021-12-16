@@ -1,62 +1,11 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Day16 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
-import Control.Monad (guard)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
+import Control.Applicative ((<|>))
 import qualified Data.Char as C
-import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
 import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
+import Data.Maybe (fromJust)
 import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import GHC.Show (intToDigit)
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
-import Numeric (readHex, showIntAtBase)
+import Numeric (readHex)
 import qualified Numeric as N
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
@@ -73,7 +22,7 @@ data Packet = Packet
   }
   deriving (Eq, Show)
 
-parse :: String -> _
+parse :: String -> Packet
 parse input = fst $ run packet
   where
     packet = do
@@ -97,8 +46,6 @@ parse input = fst $ run packet
       subCount <- binaryN 11
       packets <- P.count subCount packet
       return (Container packets)
-    -- manyPacketsFull = fullMatch . P.readP_to_S (P.many packet)
-    countPacketsFull n = fullMatch . P.readP_to_S (P.count n packet)
     literal :: P.ReadP PacketValue
     literal = do
       firsts <- P.many (P.char '1' *> P.count 4 bit)
@@ -114,36 +61,32 @@ parse input = fst $ run packet
     binaryString :: String
     binaryString = concatMap (printf "%04b") ints
     -- Standard parsers
-    letter = P.satisfy C.isLetter
-    number :: P.ReadP Int
-    number = read <$> P.munch1 C.isDigit
-    spaces = P.many1 (P.char ' ')
-    eol = P.char '\n'
     run p = longestMatch $ P.readP_to_S p binaryString
     longestMatch :: [(a, [b])] -> (a, [b])
     longestMatch = L.minimumBy (comparing (length . snd))
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
+solve1 :: Packet -> Int
 solve1 input = sum $ versions input
   where
     versions Packet {version = v, value = (Literal _)} = [v]
     versions Packet {version = v, value = (Container ps)} = v : concatMap versions ps
 
-solve2 :: _
+solve2 :: Packet -> Int
 solve2 = compute
   where
     compute :: Packet -> Int
-    compute Packet {packetType = 0, value = (Container ps)} = sum (compute <$> ps)
-    compute Packet {packetType = 1, value = (Container ps)} = product (compute <$> ps)
-    compute Packet {packetType = 2, value = (Container ps)} = minimum (compute <$> ps)
-    compute Packet {packetType = 3, value = (Container ps)} = maximum (compute <$> ps)
-    compute Packet {packetType = 4, value = (Literal x)} = x
-    compute Packet {packetType = 5, value = (Container [a, b])} = if compute a > compute b then 1 else 0
-    compute Packet {packetType = 6, value = (Container [a, b])} = if compute a < compute b then 1 else 0
-    compute Packet {packetType = 7, value = (Container [a, b])} = if compute a == compute b then 1 else 0
-    compute _ = undefined
+    compute = \case
+      Packet {packetType = 0, value = (Container ps)} -> sum (compute <$> ps)
+      Packet {packetType = 1, value = (Container ps)} -> product (compute <$> ps)
+      Packet {packetType = 2, value = (Container ps)} -> minimum (compute <$> ps)
+      Packet {packetType = 3, value = (Container ps)} -> maximum (compute <$> ps)
+      Packet {packetType = 4, value = (Literal x)} -> x
+      Packet {packetType = 5, value = (Container [a, b])} -> if compute a > compute b then 1 else 0
+      Packet {packetType = 6, value = (Container [a, b])} -> if compute a < compute b then 1 else 0
+      Packet {packetType = 7, value = (Container [a, b])} -> if compute a == compute b then 1 else 0
+      _ -> undefined
 
 main = do
   input <- readFile "inputs/Day16.txt"
@@ -152,4 +95,11 @@ main = do
       solve1 (parse "8A004A801A8002F478") @?= 16
       solve1 (parse input) @?= 908
       solve2 (parse "C200B40A82") @?= 3
+      solve2 (parse "04005AC33890") @?= 54
+      solve2 (parse "880086C3E88112") @?= 7
+      solve2 (parse "CE00C43D881120") @?= 9
+      solve2 (parse "D8005AC2A8F0") @?= 1
+      solve2 (parse "F600BC2D8F") @?= 0
+      solve2 (parse "9C005AC2F8F0") @?= 0
+      solve2 (parse "9C0141080250320F1802104A08") @?= 1
       solve2 (parse input) @?= 10626195124371
