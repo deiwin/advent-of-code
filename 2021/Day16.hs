@@ -131,24 +131,25 @@ solve1 input = sum $ versions input
     versions Packet {version = v, value = (Literal _)} = [v]
     versions Packet {version = v, value = (Container ps)} = v : concatMap versions ps
 
-toInt :: [Int] -> Int
-toInt =
-  reverse
-    >>> zip ((10 ^) <$> [0 ..])
-    >>> fmap (uncurry (*))
-    >>> sum
+solve2 :: _
+solve2 = compute
+  where
+    compute :: Packet -> Int
+    compute Packet {packetType = 0, value = (Container ps)} = sum (compute <$> ps)
+    compute Packet {packetType = 1, value = (Container ps)} = product (compute <$> ps)
+    compute Packet {packetType = 2, value = (Container ps)} = minimum (compute <$> ps)
+    compute Packet {packetType = 3, value = (Container ps)} = maximum (compute <$> ps)
+    compute Packet {packetType = 4, value = (Literal x)} = x
+    compute Packet {packetType = 5, value = (Container [a, b])} = if compute a > compute b then 1 else 0
+    compute Packet {packetType = 6, value = (Container [a, b])} = if compute a < compute b then 1 else 0
+    compute Packet {packetType = 7, value = (Container [a, b])} = if compute a == compute b then 1 else 0
+    compute _ = undefined
 
 main = do
   input <- readFile "inputs/Day16.txt"
-  -- exampleInput <- readFile "inputs/Day16_example.txt"
-  -- print $ solve1 $ parse "D2FE28"
-  -- print $ solve1 $ parse "38006F45291200"
-  -- print $ solve1 $ parse "EE00D40C823060"
-  print $ parse "8A004A801A8002F478"
-  print $ solve1 $ parse "8A004A801A8002F478"
-  print $ solve1 $ parse input
   runTestTT $
     TestCase $ do
       solve1 (parse "8A004A801A8002F478") @?= 16
       solve1 (parse input) @?= 908
-      1 @?= 1
+      solve2 (parse "C200B40A82") @?= 3
+      solve2 (parse input) @?= 10626195124371
