@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 05fef65cdafcf7ac44384977cdbd16a3a4d842242ed14a016a301fb2489df0ae
+-- hash: a757f70788570a54b7c82082ffdc76c9f299608fbf5914e2c15a7c03ad679e74
 
 name:           advent-of-code
 version:        0.0.0
@@ -29,6 +29,7 @@ library
       Day15
       Day16
       Day17
+      Day18
       DayXX
       Practice.Y2015D01
       Practice.Y2016D01
@@ -38,8 +39,15 @@ library
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
-      ./.
-  default-extensions: BangPatterns LambdaCase PartialTypeSignatures RecordWildCards OverloadedStrings TupleSections ScopedTypeVariables
+      ./
+  default-extensions:
+      BangPatterns
+      LambdaCase
+      PartialTypeSignatures
+      RecordWildCards
+      OverloadedStrings
+      TupleSections
+      ScopedTypeVariables
   ghc-options: -W
   build-depends:
       HUnit
