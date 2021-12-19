@@ -1,67 +1,17 @@
 module Day19 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
 import Control.Monad (guard)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
 import qualified Data.Char as C
 import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
 import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-    listToMaybe,
-    mapMaybe,
-  )
-import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
+import Data.Maybe (fromJust, listToMaybe, mapMaybe)
 import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import qualified Linear.Algebra as LA
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
-import qualified Linear.Vector as LV
+import Debug.Trace (traceShow)
 import qualified Linear.Matrix as LM
+import Linear.V3 (V3 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
-import Control.Monad (guard)
 
 data Axis = X | Y | Z
   deriving (Eq, Show, Enum)
@@ -71,8 +21,6 @@ data Report = Report
     beaconCoords :: [V3 Int]
   }
   deriving (Eq, Show)
-
--- type Report = (Int, [V3 Int])
 
 parse :: String -> [Report]
 parse input = run (scannerResult `P.sepBy1` eol <* P.eof)
@@ -94,7 +42,7 @@ parse input = run (scannerResult `P.sepBy1` eol <* P.eof)
     run p = fullMatch $ P.readP_to_S p input
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
+solve1 :: [Report] -> Int
 solve1 input =
   input
     & align
@@ -102,7 +50,7 @@ solve1 input =
     & S.fromList
     & S.size
 
-solve2 :: _
+solve2 :: [Report] -> Int
 solve2 input =
   input
     & align
@@ -118,16 +66,16 @@ manhattan a b = abs x + abs y + abs z
 
 align :: [Report] -> [(V3 Int, Report)]
 align [] = undefined
-align (r:rs) = go [(V3 0 0 0, r)] rs
+align (r : rs) = go [(V3 0 0 0, r)] rs
   where
     go a b | traceShow (length a, length b) False = undefined
     go aligned [] = aligned
     go aligned unaligned = go newAligned newUnaligned
       where
         newUnaligned = L.filter ((/= scannerNumber matchingReport) . scannerNumber) unaligned
-        newAligned = (diff, matchingReport):aligned
+        newAligned = (diff, matchingReport) : aligned
         (diff, matchingReport) =
-          cartProd (snd <$> aligned) unaligned -- TODO should consider base diff?
+          cartProd (snd <$> aligned) unaligned
             & mapMaybe (uncurry triangulate)
             & head
 
@@ -148,7 +96,7 @@ triangulate base comparison = listToMaybe $ do
 allOrientations :: Report -> [Report]
 allOrientations report = rotateReport <$> allRotM
   where
-    rotateReport rot = report { beaconCoords = (rot LM.!*) <$> beaconCoords report }
+    rotateReport rot = report {beaconCoords = (rot LM.!*) <$> beaconCoords report}
     allRotM = L.nub $ do
       xRotN1 <- take 4 (iterate (LM.!*! xRot) xRot)
       xRotN2 <- take 4 (iterate (LM.!*! xRot) xRot)
@@ -167,6 +115,7 @@ allOrientations report = rotateReport <$> allRotM
 
 selfCartProd :: Eq a => [a] -> [(a, a)]
 selfCartProd xs = [(x, y) | (i, x) <- zip [0 ..] xs, (j, y) <- zip [0 ..] xs, i /= j]
+
 cartProd :: [a] -> [a] -> [(a, a)]
 cartProd xs ys = [(x, y) | x <- xs, y <- ys]
 
