@@ -5,7 +5,7 @@ import Control.Monad (foldM)
 import qualified Data.Char as C
 import Data.Function ((&))
 import qualified Data.List as L
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, maybe)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
