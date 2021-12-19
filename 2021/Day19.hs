@@ -98,26 +98,40 @@ solve1 :: _
 solve1 input =
   input
     & align
-    & concatMap beaconCoords
+    & concatMap (beaconCoords . snd)
     & S.fromList
     & S.size
 
-align :: [Report] -> [Report]
+solve2 :: _
+solve2 input =
+  input
+    & align
+    & fmap fst
+    & selfCartProd
+    & fmap (uncurry manhattan)
+    & maximum
+
+manhattan :: V3 Int -> V3 Int -> Int
+manhattan a b = abs x + abs y + abs z
+  where
+    (V3 x y z) = a - b
+
+align :: [Report] -> [(V3 Int, Report)]
 align [] = undefined
-align (r:rs) = go [r] rs
+align (r:rs) = go [(V3 0 0 0, r)] rs
   where
     go a b | traceShow (length a, length b) False = undefined
     go aligned [] = aligned
     go aligned unaligned = go newAligned newUnaligned
       where
         newUnaligned = L.filter ((/= scannerNumber matchingReport) . scannerNumber) unaligned
-        newAligned = matchingReport:aligned
-        matchingReport =
-          cartProd aligned unaligned
+        newAligned = (diff, matchingReport):aligned
+        (diff, matchingReport) =
+          cartProd (snd <$> aligned) unaligned -- TODO should consider base diff?
             & mapMaybe (uncurry triangulate)
             & head
 
-triangulate :: Report -> Report -> Maybe Report
+triangulate :: Report -> Report -> Maybe (V3 Int, Report)
 triangulate base comparison = listToMaybe $ do
   rotatedComparison <- allOrientations comparison
   baseFocus <- beaconCoords base
@@ -126,8 +140,10 @@ triangulate base comparison = listToMaybe $ do
   let comparisonMod = S.fromList (flip (-) comparisonFocus <$> beaconCoords rotatedComparison)
   let overlap = S.size (S.intersection baseMod comparisonMod)
   guard (overlap >= 12)
-  let update = fmap (\c -> c - comparisonFocus + baseFocus)
-  return (rotatedComparison {beaconCoords = update (beaconCoords rotatedComparison)})
+  let diff = baseFocus - comparisonFocus
+  let update = fmap (+ diff)
+  let updatedComparison = rotatedComparison {beaconCoords = update (beaconCoords rotatedComparison)}
+  return (diff, updatedComparison)
 
 allOrientations :: Report -> [Report]
 allOrientations report = rotateReport <$> allRotM
@@ -157,8 +173,9 @@ cartProd xs ys = [(x, y) | x <- xs, y <- ys]
 main = do
   input <- readFile "inputs/Day19.txt"
   exampleInput <- readFile "inputs/Day19_example.txt"
-  print $ solve1 $ parse exampleInput
   runTestTT $
     TestCase $ do
       solve1 (parse exampleInput) @?= 79
       solve1 (parse input) @?= 372
+      solve2 (parse exampleInput) @?= 3621
+      solve2 (parse input) @?= 12241
