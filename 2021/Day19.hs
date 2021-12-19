@@ -15,9 +15,6 @@ import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
 
-data Axis = X | Y | Z
-  deriving (Eq, Show, Enum)
-
 data Report = Report
   { scannerNumber :: Int,
     beaconCoords :: [V3 Int]
