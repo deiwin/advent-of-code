@@ -53,14 +53,15 @@ import Debug.Trace
     traceShowId,
   )
 import qualified Linear.Algebra as LA
-import qualified Linear.Matrix as LM
 import Linear.V2 (V2 (..))
 import Linear.V3 (V3 (..))
 import Linear.V4 (V4 (..))
 import qualified Linear.Vector as LV
+import qualified Linear.Matrix as LM
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
+import Control.Monad (guard)
 
 data Axis = X | Y | Z
   deriving (Eq, Show, Enum)
@@ -71,7 +72,7 @@ data Report = Report
   }
   deriving (Eq, Show)
 
-type Rotation = LM.M33 Int
+-- type Report = (Int, [V3 Int])
 
 parse :: String -> [Report]
 parse input = run (scannerResult `P.sepBy1` eol <* P.eof)
@@ -93,74 +94,46 @@ parse input = run (scannerResult `P.sepBy1` eol <* P.eof)
     run p = fullMatch $ P.readP_to_S p input
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
--- solve1 :: _
--- solve1 input =
---   input
---     & align
---     & concatMap (beaconCoords . snd)
---     & S.fromList
---     & S.size
+solve1 :: _
+solve1 input =
+  input
+    & align
+    & concatMap (beaconCoords . snd)
+    & S.fromList
+    & S.size
 
--- solve2 :: _
--- solve2 input =
---   input
---     & align
---     & fmap fst
---     & selfCartProd
---     & fmap (uncurry manhattan)
---     & maximum
+solve2 :: _
+solve2 input =
+  input
+    & align
+    & fmap fst
+    & selfCartProd
+    & fmap (uncurry manhattan)
+    & maximum
 
--- manhattan :: V3 Int -> V3 Int -> Int
--- manhattan a b = abs x + abs y + abs z
---   where
---     (V3 x y z) = a - b
-
-align :: [Report] -> _ -- [(V3 Int, Report)]
-align reports =
-  reports
-    & selfUniquePairs
-    & mapMaybe (\(a, b) -> (a,) <$> triangulate a b)
-    & go IM.empty
+manhattan :: V3 Int -> V3 Int -> Int
+manhattan a b = abs x + abs y + abs z
   where
-    go ::
-      IntMap (V3 Int, Rotation, Report) ->
-      [(Report, (V3 Int, Rotation, Report))] ->
-      IntMap (V3 Int, Rotation, Report)
-    go a b | traceShow ("sizes", IM.size a, length b) False = undefined
-    go alignedMap [] = alignedMap
-    go alignedMap (match : rest) | IM.null alignedMap = go initialMap rest
-      where
-        (base, (diff, rot, comparison)) = match
-        initialMap =
-          IM.fromList
-            [ (scannerNumber base, (V3 0 0 0, idRot, base)),
-              (scannerNumber comparison, (diff, rot, comparison))
-            ]
-    go alignedMap matches
-      | traceShow ("found", IM.keys alignedMap) False = undefined
-      | traceShow ("rem", showMatch <$> remainingMatches) False = undefined
-      | otherwise = go newMap remainingMatches
-      where
-        showMatch (a, (_, _, b)) = (scannerNumber a, scannerNumber b)
-        newMap :: IntMap (V3 Int, Rotation, Report)
-        newMap =
-          readyMatches
-            & fmap (toAssoc . update . findBase)
-            & IM.fromList
-            & IM.union alignedMap
-        findBase (base, match) = (alignedMap IM.! scannerNumber base, match)
-        update ((baseDiff, baseRot, _), (diff, rot, comparison)) = (newDiff, newRot, newReport)
-          where
-            newDiff = baseDiff + (baseRot LM.!* diff)
-            newRot = baseRot LM.!*! rot
-            newReport = comparison { beaconCoords = updateCoord <$> beaconCoords comparison }
-            updateCoord c = baseDiff + (baseRot LM.!* c)
-        toAssoc x@(_, _, report) = (scannerNumber report, x)
-        (readyMatches@(_:_), remainingMatches) = L.partition ((`IM.member` alignedMap) . scannerNumber . fst) matches
+    (V3 x y z) = a - b
 
-triangulate :: Report -> Report -> Maybe (V3 Int, Rotation, Report)
+align :: [Report] -> [(V3 Int, Report)]
+align [] = undefined
+align (r:rs) = go [(V3 0 0 0, r)] rs
+  where
+    go a b | traceShow (length a, length b) False = undefined
+    go aligned [] = aligned
+    go aligned unaligned = go newAligned newUnaligned
+      where
+        newUnaligned = L.filter ((/= scannerNumber matchingReport) . scannerNumber) unaligned
+        newAligned = (diff, matchingReport):aligned
+        (diff, matchingReport) =
+          cartProd (snd <$> aligned) unaligned -- TODO should consider base diff?
+            & mapMaybe (uncurry triangulate)
+            & head
+
+triangulate :: Report -> Report -> Maybe (V3 Int, Report)
 triangulate base comparison = listToMaybe $ do
-  (rot, rotatedComparison) <- allOrientations comparison
+  rotatedComparison <- allOrientations comparison
   baseFocus <- beaconCoords base
   comparisonFocus <- beaconCoords rotatedComparison
   let baseMod = S.fromList (flip (-) baseFocus <$> beaconCoords base)
@@ -170,12 +143,12 @@ triangulate base comparison = listToMaybe $ do
   let diff = baseFocus - comparisonFocus
   let update = fmap (+ diff)
   let updatedComparison = rotatedComparison {beaconCoords = update (beaconCoords rotatedComparison)}
-  return (diff, rot, updatedComparison)
+  return (diff, updatedComparison)
 
-allOrientations :: Report -> [(Rotation, Report)]
+allOrientations :: Report -> [Report]
 allOrientations report = rotateReport <$> allRotM
   where
-    rotateReport rot = (rot, report {beaconCoords = (rot LM.!*) <$> beaconCoords report})
+    rotateReport rot = report { beaconCoords = (rot LM.!*) <$> beaconCoords report }
     allRotM = L.nub $ do
       xRotN1 <- take 4 (iterate (LM.!*! xRot) xRot)
       xRotN2 <- take 4 (iterate (LM.!*! xRot) xRot)
@@ -192,38 +165,17 @@ allOrientations report = rotateReport <$> allRotM
         (V3 0 1 0)
         (V3 (-1) 0 0)
 
-idRot =
-  V3
-    (V3 1 0 0)
-    (V3 0 1 0)
-    (V3 0 0 1)
-
-selfUniquePairs :: [a] -> [(a, a)]
-selfUniquePairs xs =
-  L.tails xs
-    & drop 1
-    & zip xs
-    & concatMap (\(a, bs) -> (a,) <$> bs)
-
 selfCartProd :: Eq a => [a] -> [(a, a)]
 selfCartProd xs = [(x, y) | (i, x) <- zip [0 ..] xs, (j, y) <- zip [0 ..] xs, i /= j]
-
 cartProd :: [a] -> [a] -> [(a, a)]
 cartProd xs ys = [(x, y) | x <- xs, y <- ys]
 
 main = do
   input <- readFile "inputs/Day19.txt"
   exampleInput <- readFile "inputs/Day19_example.txt"
-  -- print $ solve2 $ parse exampleInput
-  print $ length $ align $ parse input
   runTestTT $
     TestCase $ do
-      1 @?= 1
-      selfUniquePairs [0, 1, 2] @?= [(0, 1), (0, 2), (1, 2)]
-      selfUniquePairs [0, 1, 2, 3] @?= [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-
--- solve1 (parse exampleInput) @?= 79
--- solve1 (parse input) @?= 372
--- solve2 (parse exampleInput) @?= 3621
-
--- solve2 (parse input) @?= 12241
+      solve1 (parse exampleInput) @?= 79
+      solve1 (parse input) @?= 372
+      solve2 (parse exampleInput) @?= 3621
+      solve2 (parse input) @?= 12241
