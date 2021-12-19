@@ -2,10 +2,12 @@ module Day19 (main) where
 
 import Control.Monad (guard)
 import qualified Data.Char as C
+import Data.Either (isRight, partitionEithers)
 import Data.Function ((&))
 import qualified Data.List as L
-import Data.Maybe (fromJust, listToMaybe, mapMaybe)
+import Data.Maybe (fromJust, listToMaybe)
 import qualified Data.Set as S
+import Data.Tuple (swap)
 import Debug.Trace (traceShow)
 import qualified Linear.Matrix as LM
 import Linear.V3 (V3 (..))
@@ -65,19 +67,39 @@ manhattan a b = abs x + abs y + abs z
     (V3 x y z) = a - b
 
 align :: [Report] -> [(V3 Int, Report)]
-align [] = undefined
-align (r : rs) = go [(V3 0 0 0, r)] rs
+align [] = []
+align (r : rs) = go [(V3 0 0 0, r)] S.empty rs
   where
-    go a b | traceShow (length a, length b) False = undefined
-    go aligned [] = aligned
-    go aligned unaligned = go newAligned newUnaligned
+    go a b c | traceShow (length a, S.size b, length c) False = undefined
+    go aligned _ [] = aligned
+    go aligned knownNoMatch unaligned = go newAligned newKnownNoMatch newUnaligned
       where
         newUnaligned = L.filter ((/= scannerNumber matchingReport) . scannerNumber) unaligned
         newAligned = (diff, matchingReport) : aligned
-        (diff, matchingReport) =
+        (noMatchPairs, (diff, matchingReport)) =
           cartProd (snd <$> aligned) unaligned
-            & mapMaybe (uncurry triangulate)
-            & head
+            & fmap checkPair
+            & partitionUntilRight
+        checkPair (a, b)
+          | p `S.member` knownNoMatch = Left p
+          | otherwise =
+            case triangulate a b of
+              Nothing -> Left p
+              Just x -> Right x
+          where
+            p = (scannerNumber a, scannerNumber b)
+        partitionUntilRight :: [Either a b] -> ([a], b)
+        partitionUntilRight xs =
+          case L.findIndex isRight xs of
+            Nothing -> error "expecting to find at least one match"
+            Just i -> (lefts, right)
+              where
+                (lefts, [right]) = partitionEithers (take (i + 1) xs)
+        newKnownNoMatch =
+          noMatchPairs
+            & (++ (swap <$> noMatchPairs))
+            & S.fromList
+            & S.union knownNoMatch
 
 triangulate :: Report -> Report -> Maybe (V3 Int, Report)
 triangulate base comparison = listToMaybe $ do
