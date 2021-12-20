@@ -78,6 +78,9 @@ parse input = run $ do
 solve1 :: _
 solve1 input = S.size (runN input 2)
 
+solve2 :: _
+solve2 input = S.size (runN input 50)
+
 runN :: ([Bool], [[Bool]]) -> Int -> Set (V2 Int)
 runN input n =
   (False, grid)
@@ -110,7 +113,6 @@ enhance algo (infinityLit, grid) = (newInfinityLit, newGrid)
       | otherwise = infinityLit
     toSecond f a = (a, f a)
     bounds = gridBounds grid
-    surrounding' a = range (a - V2 10 10, a + V2 10 10)
 
 toInt :: [Bool] -> Int
 toInt =
@@ -158,12 +160,11 @@ gridBounds grid = (minBound, maxBound)
 main = do
   input <- readFile "inputs/Day20.txt"
   exampleInput <- readFile "inputs/Day20_example.txt"
-  -- print $ solve1 $ parse exampleInput
-  putStrLn (showGrid (runN (parse input) 2))
-  -- putStrLn (showGrid (runN (parse exampleInput) 2))
-  -- putStrLn (showGrid (runN (parse exampleInput) 20))
+  putStrLn (showGrid (runN (parse exampleInput) 20))
   runTestTT $
     TestCase $ do
       surrounding (V2 0 0) @?= [V2 (-1) (-1), V2 (-1) 0, V2 (-1) 1, V2 0 (-1), V2 0 0, V2 0 1, V2 1 (-1), V2 1 0, V2 1 1]
       solve1 (parse exampleInput) @?= 35
-      solve1 (parse input) @?= 5488
+      solve1 (parse input) @?= 5419
+      solve2 (parse exampleInput) @?= 3351
+      solve2 (parse input) @?= 17325
