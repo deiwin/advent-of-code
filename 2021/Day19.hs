@@ -83,18 +83,17 @@ triangulate base comparison = listToMaybe $ do
   rotatedComparison <- allOrientations comparison
   let (diff, overlap) = bestDiff base rotatedComparison
   guard (overlap >= 12)
-  let update = fmap (+ diff)
-  let updatedComparison = rotatedComparison {beaconCoords = update (beaconCoords rotatedComparison)}
-  return (diff, updatedComparison)
+  return (diff, update rotatedComparison diff)
   where
-    bestDiff :: Report -> Report -> (V3 Int, Int)
     bestDiff from to =
       cartProd (beaconCoords from) (beaconCoords to)
         & fmap (uncurry (-))
-        & flip zip (repeat 1)
-        & M.fromListWith (+)
-        & M.toList
+        & cardinality
         & L.maximumBy (comparing snd)
+    update report diff = report {beaconCoords = (+ diff) <$> beaconCoords report}
+
+cardinality :: Ord a => [a] -> [(a, Int)]
+cardinality xs = M.toList (M.fromListWith (+) (zip xs (repeat 1)))
 
 allOrientations :: Report -> [Report]
 allOrientations report = rotateReport <$> allRotM
