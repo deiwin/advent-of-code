@@ -4,7 +4,9 @@ import Control.Monad (guard)
 import qualified Data.Char as C
 import Data.Function ((&))
 import qualified Data.List as L
+import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust, listToMaybe, mapMaybe)
+import Data.Ord (comparing)
 import qualified Data.Set as S
 import Debug.Trace (traceShow)
 import qualified Linear.Matrix as LM
@@ -79,16 +81,20 @@ align (r : rs) = go [(V3 0 0 0, r)] rs
 triangulate :: Report -> Report -> Maybe (V3 Int, Report)
 triangulate base comparison = listToMaybe $ do
   rotatedComparison <- allOrientations comparison
-  baseFocus <- beaconCoords base
-  comparisonFocus <- beaconCoords rotatedComparison
-  let baseMod = S.fromList (flip (-) baseFocus <$> beaconCoords base)
-  let comparisonMod = S.fromList (flip (-) comparisonFocus <$> beaconCoords rotatedComparison)
-  let overlap = S.size (S.intersection baseMod comparisonMod)
+  let (diff, overlap) = bestDiff base rotatedComparison
   guard (overlap >= 12)
-  let diff = baseFocus - comparisonFocus
   let update = fmap (+ diff)
   let updatedComparison = rotatedComparison {beaconCoords = update (beaconCoords rotatedComparison)}
   return (diff, updatedComparison)
+  where
+    bestDiff :: Report -> Report -> (V3 Int, Int)
+    bestDiff from to =
+      cartProd (beaconCoords from) (beaconCoords to)
+        & fmap (uncurry (-))
+        & flip zip (repeat 1)
+        & M.fromListWith (+)
+        & M.toList
+        & L.maximumBy (comparing snd)
 
 allOrientations :: Report -> [Report]
 allOrientations report = rotateReport <$> allRotM
