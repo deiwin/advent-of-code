@@ -2,61 +2,13 @@
 
 module Day21 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
-import Control.Monad (foldM, guard)
-import Control.Monad.Memo (MonadMemo, for2, memo, runMemo, startEvalMemo)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
+import Control.Monad (foldM)
+import Control.Monad.Memo (MonadMemo, memo, startEvalMemo)
 import qualified Data.Char as C
 import Data.Either (fromLeft)
-import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
+import Data.List (foldl')
 import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
-import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
+import Data.Maybe (fromJust)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
@@ -126,7 +78,7 @@ initialState input = State {currentPlayer = p1, nextPlayer = p2}
     p2 = Player {pNumber = 2, pos = p2Pos, score = 0}
     (p1Pos, p2Pos) = input
 
-solve2 :: (Int, Int) -> _
+solve2 :: (Int, Int) -> Int
 solve2 input = uncurry max $ countDiracWins $ initialState input
 
 countDiracWins :: State -> (Int, Int)
@@ -139,10 +91,12 @@ countDiracWins = startEvalMemo . go
           then return (1, 0)
           else return (0, 1)
       | otherwise = tupleSum <$> mapM (\rs -> memo go (playTurn rs s)) rolls
-    rolls =  [[x, y, z] | x <- [1 .. 3], y <- [1 .. 3], z <- [1 .. 3]]
+    rolls = [[x, y, z] | x <- [1 .. 3], y <- [1 .. 3], z <- [1 .. 3]]
     tupleSum :: [(Int, Int)] -> (Int, Int)
-    tupleSum = foldl' tupleAdd (0, 0)
-    tupleAdd (a, b) (c, d) = (a + c, b + d)
+    tupleSum = foldl' (both2 (+)) (0, 0)
+
+both2 :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
+both2 f (a, b) (c, d) = (f a c, f b d)
 
 runEither :: (a -> Either a a) -> a -> a
 runEither f x = fromLeft undefined (foldM (\x _ -> f x) x [0 ..])
