@@ -19,6 +19,7 @@ import qualified Data.IntSet as IS
 import Data.Ix
   ( inRange,
     range,
+    rangeSize
   )
 import Data.List
   ( foldl',
@@ -56,8 +57,11 @@ import Linear.V4 (V4 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
+import Control.Arrow (second)
 
-parse :: String -> _
+type Range = (V3 Int, V3 Int)
+
+parse :: String -> [(Bool, Range)]
 parse input = run (line `P.endBy1` eol <* P.eof)
   where
     line = do
@@ -82,7 +86,7 @@ parse input = run (line `P.endBy1` eol <* P.eof)
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
+solve1 :: [(Bool, Range)] -> Int
 solve1 input =
   input
     & filter (inRange initializationBounds . fst . snd)
@@ -93,11 +97,87 @@ solve1 input =
     merge set (False, bounds) = set S.\\ S.fromList (range bounds)
     initializationBounds = (V3 (-50) (-50) (-50), V3 50 50 50)
 
+solve2 :: [(Bool, Range)] -> Integer
+solve2 input =
+  input
+    -- & take 20
+    & foldl' go S.empty
+    & S.toList
+    & fmap (fromIntegral . rangeSize)
+    & sum
+  where
+    go volumes (False, _) | S.null volumes = S.empty
+    go volumes (True, volume) | S.null volumes = S.singleton volume
+    go volumes new
+      | traceShow (length volumes) False = undefined
+      | otherwise = S.foldr (\v s -> S.union s (S.fromList (merge v new))) S.empty volumes
+
+merge :: Range -> (Bool, Range) -> [Range]
+merge base (False, new)
+  | not (overlap base new) = [base]
+  | new `subsumes` base = []
+merge base (True, new)
+  | not (overlap base new) = [base, new]
+  | new `subsumes` base = [new]
+  | base `subsumes` new = [base]
+merge base (keep, new)
+  | keep = baseVolumes ++ sharedVolumes ++ newVolumes
+  | otherwise = baseVolumes
+  where
+    (baseVolumes, sharedVolumes, newVolumes) = split base new
+
+split :: Range -> Range -> ([Range], [Range], [Range])
+split a b = (aVolumes, sharedVolumes, bVolumes)
+  where
+    aVolumes =
+      allVolumes
+        & filter (a `subsumes`)
+        & (L.\\ sharedVolumes)
+    bVolumes =
+      allVolumes
+        & filter (b `subsumes`)
+        & (L.\\ sharedVolumes)
+    sharedVolumes = filter (\v -> a `subsumes` v && b `subsumes` v) allVolumes
+    allVolumes = foldl' go [a, b] splitPoints
+    go volumes p = concatMap (`splitOnPoint` p) volumes
+    splitPoints =
+      filter (inRange a) (corners b)
+        & (++ filter (inRange b) (corners a))
+        & L.nub
+
+splitOnPoint :: Range -> V3 Int -> [Range]
+splitOnPoint volume@(V3 z1 y1 x1, V3 z2 y2 x2) p@(V3 zp yp xp)
+  | not (inRange volume p) = [volume]
+  | otherwise = filter ((> 0) . rangeSize) $ do
+    (zFrom, zTo) <- [(z1, zp - 1), (zp, z2)]
+    (yFrom, yTo) <- [(y1, yp - 1), (yp, y2)]
+    (xFrom, xTo) <- [(x1, xp - 1), (xp, x2)]
+    return (V3 zFrom yFrom xFrom, V3 zTo yTo xTo)
+
+subsumes :: Range -> Range -> Bool
+subsumes a b = all (inRange a) (corners b)
+
+overlap :: Range -> Range -> Bool
+overlap a b = any (inRange a) (corners b) || any (inRange b) (corners a)
+
+corners :: Range -> [V3 Int]
+corners (V3 zFrom yFrom xFrom, V3 zTo yTo xTo) =
+  [V3 z y x | z <- [zFrom, zTo], y <- [yFrom, yTo], x <- [xFrom, xTo]]
+
+selfCartProd :: Eq a => [a] -> [(a, a)]
+selfCartProd xs = [(x, y) | (i, x) <- zip [0 ..] xs, y <- drop (i + 1) xs]
+
+cartProd :: [a] -> [a] -> [(a, a)]
+cartProd xs ys = [(x, y) | x <- xs, y <- ys]
+
 main = do
   input <- readFile "inputs/Day22.txt"
-  exampleInput <- readFile "inputs/Day22_example.txt"
-  print $ solve1 $ parse exampleInput
+  exampleInput1 <- readFile "inputs/Day22_example1.txt"
+  exampleInput2 <- readFile "inputs/Day22_example2.txt"
+  print $ solve2 $ parse exampleInput2
   runTestTT $
     TestCase $ do
-      solve1 (parse exampleInput) @?= 590784
-      solve1 (parse input) @?= 590784
+      1 @?= 1
+
+-- solve1 (parse exampleInput) @?= 590784
+-- solve1 (parse input) @?= 590784
