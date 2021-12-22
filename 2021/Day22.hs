@@ -1,67 +1,21 @@
 module Day22 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
-import Control.Monad (guard)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
+import Control.Applicative ((<|>))
 import qualified Data.Char as C
 import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-    rangeSize
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
+import Data.Ix ( inRange, range, rangeSize)
+import Data.List ( foldl')
 import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
-import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
+import Data.Maybe ( fromJust)
 import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
 import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
-import Control.Arrow (second)
 
-type Range = (V3 Int, V3 Int)
+type Volume = (V3 Int, V3 Int)
 
-parse :: String -> [(Bool, Range)]
+parse :: String -> [(Bool, Volume)]
 parse input = run (line `P.endBy1` eol <* P.eof)
   where
     line = do
@@ -86,98 +40,180 @@ parse input = run (line `P.endBy1` eol <* P.eof)
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: [(Bool, Range)] -> Int
+solve1 :: [(Bool, Volume)] -> Int
 solve1 input =
   input
     & filter (inRange initializationBounds . fst . snd)
     & foldl' merge S.empty
     & S.size
   where
-    merge set (True, bounds) = S.union set (S.fromList (range bounds))
-    merge set (False, bounds) = set S.\\ S.fromList (range bounds)
+    merge set (True, v) = S.union set (S.fromList (range v))
+    merge set (False, v) = set S.\\ S.fromList (range v)
     initializationBounds = (V3 (-50) (-50) (-50), V3 50 50 50)
 
-solve2 :: [(Bool, Range)] -> Integer
-solve2 input =
-  input
-    -- & take 20
-    & foldl' go S.empty
-    & S.toList
-    & fmap (fromIntegral . rangeSize)
-    & sum
+solve2 :: [(Bool, Volume)] -> Integer
+solve2 input = volumeListSum (withCorrections input)
+
+withCorrections :: [(Bool, Volume)] -> [(Bool, Volume)]
+withCorrections = foldl' go []
   where
-    go volumes (False, _) | S.null volumes = S.empty
-    go volumes (True, volume) | S.null volumes = S.singleton volume
-    go volumes new
-      | traceShow (length volumes) False = undefined
-      | otherwise = S.foldr (\v s -> S.union s (S.fromList (merge v new))) S.empty volumes
+    go vs v@(False, _) = concatMap (`correction` v) vs
+    go vs v@(True, _) = concatMap (`correction` v) vs ++ [v]
 
-merge :: Range -> (Bool, Range) -> [Range]
-merge base (False, new)
-  | not (overlap base new) = [base]
-  | new `subsumes` base = []
-merge base (True, new)
-  | not (overlap base new) = [base, new]
-  | new `subsumes` base = [new]
-  | base `subsumes` new = [base]
-merge base (keep, new)
-  | keep = baseVolumes ++ sharedVolumes ++ newVolumes
-  | otherwise = baseVolumes
+volumeListSum :: [(Bool, Volume)] -> Integer
+volumeListSum = sum . fmap (fromIntegral . correctionSize)
+
+correctionSize :: (Bool, Volume) -> Int
+correctionSize = \case
+  (True, v) -> rangeSize v
+  (False, v) -> negate (rangeSize v)
+
+correction :: (Bool, Volume) -> (Bool, Volume) -> [(Bool, Volume)]
+correction a@(aOn, aVol) (_, bVol) =
+  case intersection aVol bVol of
+    Nothing -> [a]
+    Just interVol ->
+      if aVol == interVol
+        then []
+        else [a, (not aOn, interVol)]
+
+intersection :: Volume -> Volume -> Maybe Volume
+intersection a b
+  | rangeSize volume > 0 = Just volume
+  | otherwise = Nothing
   where
-    (baseVolumes, sharedVolumes, newVolumes) = split base new
-
-split :: Range -> Range -> ([Range], [Range], [Range])
-split a b = (aVolumes, sharedVolumes, bVolumes)
-  where
-    aVolumes =
-      allVolumes
-        & filter (a `subsumes`)
-        & (L.\\ sharedVolumes)
-    bVolumes =
-      allVolumes
-        & filter (b `subsumes`)
-        & (L.\\ sharedVolumes)
-    sharedVolumes = filter (\v -> a `subsumes` v && b `subsumes` v) allVolumes
-    allVolumes = foldl' go [a, b] splitPoints
-    go volumes p = concatMap (`splitOnPoint` p) volumes
-    splitPoints =
-      filter (inRange a) (corners b)
-        & (++ filter (inRange b) (corners a))
-        & L.nub
-
-splitOnPoint :: Range -> V3 Int -> [Range]
-splitOnPoint volume@(V3 z1 y1 x1, V3 z2 y2 x2) p@(V3 zp yp xp)
-  | not (inRange volume p) = [volume]
-  | otherwise = filter ((> 0) . rangeSize) $ do
-    (zFrom, zTo) <- [(z1, zp - 1), (zp, z2)]
-    (yFrom, yTo) <- [(y1, yp - 1), (yp, y2)]
-    (xFrom, xTo) <- [(x1, xp - 1), (xp, x2)]
-    return (V3 zFrom yFrom xFrom, V3 zTo yTo xTo)
-
-subsumes :: Range -> Range -> Bool
-subsumes a b = all (inRange a) (corners b)
-
-overlap :: Range -> Range -> Bool
-overlap a b = any (inRange a) (corners b) || any (inRange b) (corners a)
-
-corners :: Range -> [V3 Int]
-corners (V3 zFrom yFrom xFrom, V3 zTo yTo xTo) =
-  [V3 z y x | z <- [zFrom, zTo], y <- [yFrom, yTo], x <- [xFrom, xTo]]
-
-selfCartProd :: Eq a => [a] -> [(a, a)]
-selfCartProd xs = [(x, y) | (i, x) <- zip [0 ..] xs, y <- drop (i + 1) xs]
-
-cartProd :: [a] -> [a] -> [(a, a)]
-cartProd xs ys = [(x, y) | x <- xs, y <- ys]
+    volume = (V3 z1 y1 x1, V3 z2 y2 x2)
+    z1 = max (getZ (fst a)) (getZ (fst b))
+    y1 = max (getY (fst a)) (getY (fst b))
+    x1 = max (getX (fst a)) (getX (fst b))
+    z2 = min (getZ (snd a)) (getZ (snd b))
+    y2 = min (getY (snd a)) (getY (snd b))
+    x2 = min (getX (snd a)) (getX (snd b))
+    getZ (V3 z _ _) = z
+    getY (V3 _ y _) = y
+    getX (V3 _ _ x) = x
 
 main = do
   input <- readFile "inputs/Day22.txt"
   exampleInput1 <- readFile "inputs/Day22_example1.txt"
   exampleInput2 <- readFile "inputs/Day22_example2.txt"
-  print $ solve2 $ parse exampleInput2
   runTestTT $
     TestCase $ do
-      1 @?= 1
+      -- Intersections
+      intersection (V3 0 0 0, V3 0 0 0) (V3 0 0 0, V3 0 0 0) @?= Just (V3 0 0 0, V3 0 0 0)
+      intersection (V3 0 0 0, V3 1 1 1) (V3 0 0 0, V3 1 1 1) @?= Just (V3 0 0 0, V3 1 1 1)
+      intersection (V3 0 0 0, V3 0 0 0) (V3 1 1 1, V3 1 1 1) @?= Nothing
+      intersection (V3 0 0 0, V3 0 2 2) (V3 0 1 1, V3 0 2 2) @?= Just (V3 0 1 1, V3 0 2 2)
+      intersection (V3 0 0 0, V3 0 2 2) (V3 0 1 1, V3 0 3 3) @?= Just (V3 0 1 1, V3 0 2 2)
+      intersection (V3 0 0 0, V3 0 2 2) (V3 0 1 1, V3 0 3 3) @?= Just (V3 0 1 1, V3 0 2 2)
+      intersection (V3 0 0 1, V3 0 2 2) (V3 0 1 0, V3 0 3 3) @?= Just (V3 0 1 1, V3 0 2 2)
+      -- Corrections
+      -- No overlap
+      correction (True, (V3 0 0 0, V3 0 0 0)) (True, (V3 1 1 1, V3 1 1 1))
+        @?= [(True, (V3 0 0 0, V3 0 0 0))]
+      correction (True, (V3 0 0 0, V3 0 0 0)) (False, (V3 1 1 1, V3 1 1 1))
+        @?= [(True, (V3 0 0 0, V3 0 0 0))]
+      -- Exact overlap for True
+      correction (True, (V3 0 0 0, V3 0 0 0)) (True, (V3 0 0 0, V3 0 0 0)) @?= []
+      correction (True, (V3 0 0 0, V3 0 0 0)) (False, (V3 0 0 0, V3 0 0 0)) @?= []
+      -- Partial overlap for True
+      correction (True, (V3 0 0 0, V3 0 0 0)) (True, (V3 0 0 0, V3 1 1 1)) @?= []
+      correction (True, (V3 0 0 0, V3 0 0 0)) (False, (V3 0 0 0, V3 1 1 1)) @?= []
+      -- Exact overlap for False
+      correction (False, (V3 0 0 0, V3 0 0 0)) (True, (V3 0 0 0, V3 0 0 0)) @?= []
+      correction (False, (V3 0 0 0, V3 0 0 0)) (False, (V3 0 0 0, V3 0 0 0)) @?= []
+      -- Sums
+      solve2 [(True, (V3 0 0 0, V3 0 0 0))] @?= 1
+      solve2 [(True, (V3 0 0 0, V3 1 1 1))] @?= 8
+      solve2 [(True, (V3 0 0 0, V3 0 0 0)), (True, (V3 1 1 1, V3 1 1 1))] @?= 2
+      solve2 [(True, (V3 0 0 0, V3 0 0 0)), (False, (V3 1 1 1, V3 1 1 1))] @?= 1
+      solve2 [(True, (V3 0 0 0, V3 0 0 0)), (False, (V3 0 0 0, V3 0 0 0))] @?= 0
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0))
+        ]
+        @?= 0
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (True, (V3 0 0 0, V3 0 0 0))
+        ]
+        @?= 1
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0))
+        ]
+        @?= 0
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (True, (V3 0 0 0, V3 0 0 0)),
+          (True, (V3 0 0 0, V3 0 0 0))
+        ]
+        @?= 1
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 0 0 0)),
+          (True, (V3 0 0 0, V3 0 0 0))
+        ]
+        @?= 1
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 1 1 1)),
+          (True, (V3 0 0 0, V3 1 1 1))
+        ]
+        @?= 8
+      solve2
+        [ (True, (V3 0 0 0, V3 0 0 0)),
+          (False, (V3 0 0 0, V3 1 1 1)),
+          (True, (V3 1 1 1, V3 1 1 1))
+        ]
+        @?= 1
+      solve2
+        [ (True, (V3 1 1 1, V3 1 1 1)),
+          (False, (V3 1 1 1, V3 1 1 1)),
+          (True, (V3 0 0 0, V3 2 2 2))
+        ]
+        @?= 27
+      solve2
+        [ (True, (V3 1 1 1, V3 1 1 1)),
+          (True, (V3 0 0 0, V3 2 2 2)),
+          (False, (V3 1 1 1, V3 1 1 1))
+        ]
+        @?= 26
+      -- Problematic example
+      correction (True, (V3 0 0 0, V3 0 4 3)) (True, (V3 0 2 1, V3 0 3 4))
+        @?= [(True, (V3 0 0 0, V3 0 4 3)), (False, (V3 0 2 1, V3 0 3 3))]
+      correction (False, (V3 0 1 2, V3 0 4 3)) (True, (V3 0 2 1, V3 0 3 4))
+        @?= [(False, (V3 0 1 2, V3 0 4 3)), (True, (V3 0 2 2, V3 0 3 3))]
+      correction (True, (V3 0 1 2, V3 0 5 5)) (True, (V3 0 2 1, V3 0 3 4))
+        @?= [(True, (V3 0 1 2, V3 0 5 5)), (False, (V3 0 2 2, V3 0 3 4))]
+      let problematicInput =
+            [ (True, (V3 0 0 0, V3 0 4 3)),
+              (True, (V3 0 1 2, V3 0 5 5)),
+              (True, (V3 0 2 1, V3 0 3 4))
+            ]
+      withCorrections problematicInput
+        @?= [ (True, (V3 0 0 0, V3 0 4 3)),
+              (False, (V3 0 2 1, V3 0 3 3)),
+              (False, (V3 0 1 2, V3 0 4 3)),
+              (True, (V3 0 2 2, V3 0 3 3)),
+              (True, (V3 0 1 2, V3 0 5 5)),
+              (False, (V3 0 2 2, V3 0 3 4)),
+              (True, (V3 0 2 1, V3 0 3 4))
+            ]
+      (correctionSize <$> withCorrections problematicInput)
+        @?= [20, -6, -8, 4, 20, -6, 8]
+      volumeListSum (withCorrections problematicInput)
+        @?= 32
+      solve2 problematicInput
+        @?= 32
 
--- solve1 (parse exampleInput) @?= 590784
--- solve1 (parse input) @?= 590784
+      solve1 (parse exampleInput1) @?= 590784
+      solve1 (parse input) @?= 564654
+      solve2 (parse exampleInput2) @?= 2758514936282235
+      solve2 (parse input) @?= 1214193181891104
