@@ -88,78 +88,90 @@ parse input = run (P.many1 cell `P.endBy1` eol <* P.eof)
 solve1 :: _
 solve1 input = solveDijikstra (buildGrid input)
 
-solveDijikstra :: Grid -> Int
-solveDijikstra grid = go 0 grid S.empty MQ.empty
+solve2 :: _
+solve2 input = solveDijikstra (buildGrid modifiedInput)
   where
-    go :: Int -> Grid -> Set Grid -> MinQueue (Int, Int, Grid) -> Int
-    go cost grid visited toVisit
+    modifiedInput = before ++ addition ++ after
+    addition =
+      [[Wall,Wall,Wall,Amph D,Wall,Amph C,Wall,Amph B,Wall,Amph A,Wall],
+       [Wall,Wall,Wall,Amph D,Wall,Amph B,Wall,Amph A,Wall,Amph C,Wall]
+      ]
+    (before, after) = L.splitAt 3 input
+
+solveDijikstra :: Grid -> Int
+solveDijikstra grid = go 0 0 grid S.empty MQ.empty
+  where
+    go :: Int -> Int -> Grid -> Set Grid -> MinQueue _ -> Int
+    go i cost grid visited toVisit
       | isFinished grid = cost
       | grid `S.member` visited =
         case MQ.minView toVisit of
           Nothing -> undefined
-          Just ((_, newCost, newGrid), newToVisit) -> go newCost newGrid visited newToVisit
-      -- | cost >= 1000 && traceShow (cost, showGrid grid) False = undefined
+          Just ((_, newCost, j, newGrid), newToVisit) -> go j newCost newGrid visited newToVisit
+      | traceShow (i, cost) False = undefined
       | trace (showGrid grid) False = undefined
       | otherwise =
         case MQ.minView newToConsiderToVisit of
           Nothing -> undefined
-          Just ((_, newCost, newGrid), newToVisit) -> go newCost newGrid newVisited newToVisit
+          Just ((_, newCost, j, newGrid), newToVisit) -> go j newCost newGrid newVisited newToVisit
       where
         newVisited = S.insert grid visited
         newToConsiderToVisit =
           possibleMoves grid
             & fmap forQueue
-            & filter (\(_, _, grid) -> grid `S.notMember` newVisited)
+            & filter (\(_, _, _, grid) -> grid `S.notMember` newVisited)
             & MQ.fromList
             & MQ.union toVisit
-        forQueue :: (Int, Grid) -> (Int, Int, Grid)
-        forQueue (addCost, grid) = (cost + addCost + heuristicCost grid, cost + addCost, grid)
+        forQueue :: (Int, Grid) -> _
+        forQueue (addCost, grid) = (cost + addCost + heuristicCost grid, cost + addCost, (i + 1), grid)
+        -- forQueue (addCost, grid) = (cost + addCost, (i + 1), grid)
 
 heuristicCost :: Grid -> Int
 heuristicCost grid =
-  grid
-    & amphiboidLocations
-    & fmap (cost . heuristicDist)
+  [A, B, C, D]
+    & fmap findClosest
     & sum
+    & (+ unblockingCost)
   where
-    cost :: (Int, Amphiboid) -> Int
-    cost (steps, amph) = amphStepCost amph * steps
-    heuristicDist :: (V2 Int, Amphiboid) -> (Int, Amphiboid)
-    heuristicDist (c, amph) = (go, amph)
+    findClosest :: Amphiboid -> Int
+    findClosest amph =
+      curLocations
+        & L.permutations
+        & fmap (sum . fmap (cost amph) . zipWith simpleDist destLocations)
+        & minimum
       where
-        go
-          | getX c == expectedX amph =
-            if getY c == 2 && (grid A.! (c + V2 1 0) /= Amph amph)
-               then 4
-               else if getY c == 1 then 1 else 0
-          | otherwise = (getY c - 1) + abs (getX c - expectedX amph) + 1
-    getY (V2 y _) = y
-    getX (V2 _ x) = x
-    expectedX amph = getX (head (destinations amph))
-    -- heuristicDist (c, amph) =
-    --   destinations amph
-    --     & fmap (dist [(0, c)] S.empty)
-    --     & L.minimum
-    --     & (, amph)
-    -- dist :: [(Int, V2 Int)] -> Set (V2 Int) -> V2 Int -> Int
-    -- dist [] _ _ = undefined
-    -- dist ((d, from):toVisit) visited to
-    --   | from == to = d
-    --   | otherwise = dist newToVisit newVisited to
-    --   where
-    --     newVisited = S.insert from visited
-    --     newToVisit =
-    --       surrounding from
-    --         & filter (\c -> c `S.notMember` newVisited && grid A.! c /= Wall)
-    --         & fmap (d + 1,)
-    --         & (toVisit ++)
-    -- manhattan (V2 y x) = abs y + abs x
+        destLocations = destinations amph
+        curLocations =
+          amphiboidLocations grid
+            & filter ((== amph) . snd)
+            & fmap fst
+    simpleDist :: V2 Int -> V2 Int -> Int
+    simpleDist (V2 y1 x1) (V2 y2 x2)
+      | x1 == x2 = abs (y1 - y2)
+      | otherwise = abs (x1 - x2) + (y1 - 1) + (y2 - 1)
+    cost :: Amphiboid -> Int -> Int
+    cost amph steps = amphStepCost amph * steps
+    unblockingCost = sum (go <$> amphiboidLocations grid)
+      where
+        go (c, amph) = cost amph (steps (c, amph))
+        steps (c, amph)
+          | getX c == expectedX amph && blocksOthers = getY c + 2
+          | otherwise = 0
+          where
+            blocksOthers =
+              [V2 y 0 | y <- [1..4]]
+                & fmap (+ c)
+                & filter (inRange (A.bounds grid))
+                & any ((`notElem` [Open, Wall, Amph amph]) . (grid A.!))
+        getY (V2 y _) = y
+        getX (V2 _ x) = x
+        expectedX amph = getX (head (destinations amph))
 
-possibleMoves :: Grid -> [(Int, Grid)] -- needs total cost for priority queue
+possibleMoves :: Grid -> [(Int, Grid)]
 possibleMoves grid =
   amphiboidLocations grid
     & concatMap reachableForLocation
-    & filter isLegalMove
+    & filter (not . illegalMove)
     & fmap toCost
   where
     toCost (_, _, []) = undefined
@@ -168,13 +180,13 @@ possibleMoves grid =
         cost = amphStepCost amph * length path
         newGrid = grid A.// assocs
         assocs = [(from, Open), (to, Amph amph)]
-    isLegalMove (_, _, []) = undefined
-    isLegalMove (amph, from, path@(to:_))
-      | to `elem` noStop = False
-      | illegalPath amph path = False
-      | from `elem` corridor && to `notElem` destinations amph = False
-      | from `notElem` corridor && not (to `elem` corridor || to `notElem` destinations amph) = False
-      | otherwise = True
+    illegalMove (_, _, []) = undefined
+    illegalMove (amph, from, path@(to:_))
+      | to `elem` noStop = True
+      | illegalPath amph path = True
+      | from `elem` corridor && to `notElem` destinations amph = True
+      | from `notElem` corridor && not (to `elem` corridor || to `elem` destinations amph) = True
+      | otherwise = False
     illegalPath _ [] = undefined
     illegalPath amph path = any illegalStep steps
       where
@@ -183,9 +195,9 @@ possibleMoves grid =
           | from `elem` corridor && to `notElem` corridor && (wrongRoom to || occupiedRoom to) = True
           | otherwise = False
         wrongRoom c = c `notElem` destinations amph
-        occupiedRoom c = (grid A.! otherRoomCell c) `notElem` [Open, Amph amph]
-        otherRoomCell :: V2 Int -> V2 Int
-        otherRoomCell c = head (L.delete c (fromJust (L.find (c `elem`) rooms)))
+        occupiedRoom c = not (any ((`elem` [Open, Amph amph]) . (grid A.!)) (otherRoomCells c))
+        otherRoomCells :: V2 Int -> [V2 Int]
+        otherRoomCells c = L.delete c (fromJust (L.find (c `elem`) rooms))
     reachableForLocation :: (V2 Int, Amphiboid) -> [(Amphiboid, V2 Int, [V2 Int])]
     reachableForLocation (c, amph) = (amph,c,) <$> reachable grid c
 
@@ -236,10 +248,10 @@ amphStepCost = \case
   D -> 1000
 
 destinations :: Amphiboid -> [V2 Int]
-destinations A = [V2 2 3, V2 3 3]
-destinations B = [V2 2 5, V2 3 5]
-destinations C = [V2 2 7, V2 3 7]
-destinations D = [V2 2 9, V2 3 9]
+destinations A = [V2 y 3 | y <- [2..5]]
+destinations B = [V2 y 5 | y <- [2..5]]
+destinations C = [V2 y 7 | y <- [2..5]]
+destinations D = [V2 y 9 | y <- [2..5]]
 
 rooms :: [[V2 Int]]
 rooms = destinations <$> [A, B, C, D]
@@ -253,7 +265,8 @@ noStop = [V2 1 x | x <- [3, 5, 7, 9]]
 buildGrid :: [[Cell]] -> Grid
 buildGrid input = A.array bounds cells
   where
-    cells = zip (range bounds) (concat input ++ repeat Wall)
+    cells = zip (range bounds) (concat (fixLine <$> input))
+    fixLine line = take (length (head input)) (line ++ repeat Wall)
     bounds = (V2 0 0, V2 (length input - 1) (length (head input) - 1))
 
 showGrid :: Grid -> String
@@ -273,9 +286,11 @@ main = do
   input <- readFile "inputs/Day23.txt"
   exampleInput <- readFile "inputs/Day23_example.txt"
   -- traverse_ putStr (showGrid . snd <$> possibleMoves (buildGrid (parse exampleInput)))
-  -- print $ solve1 (parse input)
+  print $ solve2 (parse exampleInput)
   runTestTT $
     TestCase $ do
-      solve1 (parse exampleInput) @?= 12521
-      solve1 (parse input) @?= 16244
+      -- solve1 (parse exampleInput) @?= 12521
+      -- solve1 (parse input) @?= 16244
+      -- solve2 (parse exampleInput) @?= 43136
+      -- solve2 (parse input) @?= 43136
       1 @?= 1
