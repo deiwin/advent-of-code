@@ -222,6 +222,7 @@ main = do
       toDigits 13579246899999 @?= [1, 3, 5, 7, 9, 2, 4, 6, 8, 9, 9, 9, 9, 9]
       eval (parse input) (toDigits 13579246899999)
         @?= (M.fromList [(W, 9), (X, 1), (Y, 11), (Z, 112265567)], [])
+      -- Largest
       -- block 0, add x 11, add y 8
       evalProgramBlock (parse input) 0 0 1 @?= 9 --           [1, ..] 1 + 8
       evalProgramBlock (parse input) 0 0 9 @?= 17 --          [9, ..] 9 + 8
@@ -280,8 +281,35 @@ main = do
       evalProgramBlock (parse input) 12 459 7 @?= 17 --       [9, 9, 5, 9, 8, 9, 6, 3, 9, 9, 9, 9, 7, ..]
       -- block 13, add x -16, add y 2
       evalProgramBlock (parse input) 13 17 1 @?= 0 --         [9, 9, 5, 9, 8, 9, 6, 3, 9, 9, 9, 9, 7, 1]
-      ( eval (parse input) (toDigits 99598963999971)
-          & fst
-          & (M.! Z)
-        )
-        @?= 0
+      fst (eval (parse input) (toDigits 99598963999971)) M.! Z @?= 0
+
+      -- Smallest
+      -- block 0, add x 11, add y 8
+      evalProgramBlock (parse input) 0 0 9 @?= 17 --          [9, ..] 1 + 8
+      -- block 1, add x 12, add y 8
+      evalProgramBlock (parse input) 1 17 3 @?= 453 --        [9, 3, ..] (1+8)*26 + (1 + 8)
+      -- block 2, add x 10, add y 12
+      evalProgramBlock (parse input) 2 453 1 @?= 11791 --     [9, 3, 1, ..] (1+8)*26^2 + (1+8)*26 + (1 + 12)
+      -- block 3, add x -8, add y 10
+      evalProgramBlock (parse input) 3 11791 5 @?= 453 --     [9, 3, 1, 5, ..]
+      -- block 4, add x 15, add y 2
+      evalProgramBlock (parse input) 4 453 1 @?= 11781 --     [9, 3, 1, 5, 1, ..]
+      -- block 5, add x 15, add y 8
+      evalProgramBlock (parse input) 5 11781 4 @?= 306318 --  [9, 3, 1, 5, 1, 4, ..]
+      -- block 6, add x -11, add y 4
+      evalProgramBlock (parse input) 6 306318 1 @?= 11781  -- [9, 3, 1, 5, 1, 4, 1, ..]
+      -- block 7, add x 10, add y 9
+      evalProgramBlock (parse input) 7 11781 1 @?= 306316 --  [9, 3, 1, 5, 1, 4, 1, 1, ..]
+      -- block 8, add x -3, add y 10
+      evalProgramBlock (parse input) 8 306316 7 @?= 11781 --  [9, 3, 1, 5, 1, 4, 1, 1, 7, ..]
+      -- block 9, add x 15, add y 3
+      evalProgramBlock (parse input) 9 11781 1 @?= 306310 --  [9, 3, 1, 5, 1, 4, 1, 1, 7, 1, ..]
+      -- block 10, add x -3, add y 7
+      evalProgramBlock (parse input) 10 306310 1 @?= 11781 -- [9, 3, 1, 5, 1, 4, 1, 1, 7, 1, 1, ..]
+      -- block 11, add x -1, add y 7
+      evalProgramBlock (parse input) 11 11781 2 @?= 453 --    [9, 3, 1, 5, 1, 4, 1, 1, 7, 1, 1, 2, ..]
+      -- block 12, add x -10, add y 2
+      evalProgramBlock (parse input) 12 453 1 @?= 17 --       [9, 3, 1, 5, 1, 4, 1, 1, 7, 1, 1, 2, 1, ..]
+      -- block 13, add x -16, add y 2
+      evalProgramBlock (parse input) 13 17 1 @?= 0 --         [9, 3, 1, 5, 1, 4, 1, 1, 7, 1, 1, 2, 1, 1]
+      fst (eval (parse input) (toDigits 93151411711211)) M.! Z @?= 0
