@@ -1,61 +1,15 @@
 module Day24 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (first, second, (>>>))
-import Control.Monad (foldM, guard, replicateM)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
+import Control.Applicative ((<|>))
+import Control.Arrow (first)
 import qualified Data.Char as C
 import Data.Function ((&))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
+import Data.List (foldl')
 import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
-import Data.Ord (comparing)
-import Data.PQueue.Min (MinQueue)
-import qualified Data.PQueue.Min as MQ
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
+import Data.Maybe (fromJust)
 import Data.Tuple (swap)
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
@@ -113,54 +67,6 @@ parse input = run (operation `P.endBy1` eol)
     fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
-solve1 :: _
-solve1 program = solveDijikstra f
-  where
-    f input = fst (eval program input) M.! Z
-
-solveDijikstra :: ([Int] -> Int) -> _
-solveDijikstra f = go IS.empty (MQ.singleton (toCost initialInput))
-  where
-    go :: IntSet -> MinQueue (Int, [Int]) -> [Int]
-    -- go visited toVisit | traceShow (IS.size visited) False = undefined
-    go visited toVisit =
-      case MQ.minView toVisit of
-        Nothing -> undefined
-        Just ((cost, inputs), withoutVisit) ->
-          let newToVisit =
-                surrounding inputs
-                  & filter ((`IS.notMember` visited) . toInt)
-                  & fmap toCost
-                  & MQ.fromList
-                  & MQ.union withoutVisit
-              newVisited = IS.insert (toInt inputs) visited
-           in if IS.member (toInt inputs) visited
-                then go visited withoutVisit
-                else
-                  if traceShow (cost, toInt inputs) cost == 0
-                    then inputs
-                    else go newVisited newToVisit
-
-    surrounding :: [Int] -> [[Int]]
-    surrounding inputs =
-      (updateN inputs (\x -> x - 1) <$> [0 .. (length inputs - 1)])
-        & (++ (updateN inputs (+ 1) <$> [0 .. (length inputs - 1)]))
-        & filter (all (> 0))
-        & filter (all (<= 9))
-      where
-        updateN inputs f n = snd . (\(i, x) -> if i == n then (i, f x) else (i, x)) <$> zip [0 ..] inputs
-    toCost :: [Int] -> (Int, [Int])
-    toCost inputs = (f inputs, inputs)
-    -- initialInput = replicateM 14 [9,8..1]
-    initialInput = replicate 14 9
-
-toInt :: [Int] -> Int
-toInt =
-  reverse
-    >>> zip ((10 ^) <$> [0 ..])
-    >>> fmap (uncurry (*))
-    >>> sum
-
 toDigits :: Int -> [Int]
 toDigits = reverse . L.unfoldr f
   where
@@ -209,13 +115,10 @@ evalProgramBlock program n initialZ input =
 
 main = do
   input <- readFile "inputs/Day24.txt"
-  exampleInput1 <- readFile "inputs/Day24_example1.txt"
-  exampleInput2 <- readFile "inputs/Day24_example2.txt"
-  -- print (take 2 (replicateM 14 [9,8..1]))
-  -- print $ solve1 $ parse input
+  exampleInput <- readFile "inputs/Day24_example.txt"
   runTestTT $
     TestCase $ do
-      eval (parse exampleInput1) [11]
+      eval (parse exampleInput) [11]
         @?= (M.fromList [(W, 1), (X, 0), (Y, 1), (Z, 1)], [])
       toDigits 1 @?= [1]
       toDigits 1234 @?= [1, 2, 3, 4]
@@ -297,7 +200,7 @@ main = do
       -- block 5, add x 15, add y 8
       evalProgramBlock (parse input) 5 11781 4 @?= 306318 --  [9, 3, 1, 5, 1, 4, ..]
       -- block 6, add x -11, add y 4
-      evalProgramBlock (parse input) 6 306318 1 @?= 11781  -- [9, 3, 1, 5, 1, 4, 1, ..]
+      evalProgramBlock (parse input) 6 306318 1 @?= 11781 -- [9, 3, 1, 5, 1, 4, 1, ..]
       -- block 7, add x 10, add y 9
       evalProgramBlock (parse input) 7 11781 1 @?= 306316 --  [9, 3, 1, 5, 1, 4, 1, 1, ..]
       -- block 8, add x -3, add y 10
