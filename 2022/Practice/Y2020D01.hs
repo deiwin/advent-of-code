@@ -27,20 +27,20 @@ parse input = run $ do
 solve1 :: [Int] -> Maybe Int
 solve1 input =
   options
-    & L.find ((== 2020) . uncurry (+))
-    <&> uncurry (*)
+    & L.find ((== 2020) . sum)
+    <&> product
   where
     options = do
       (i, x) <- zip [0 ..] input
       (j, y) <- zip [0 ..] input
       guard (i /= j)
-      return (x, y)
+      return [x, y]
 
 solve2 :: [Int] -> Maybe Int
 solve2 input =
   options
-    & L.find ((== 2020) . (\(a, b, c) -> a + b + c))
-    <&> (\(a, b, c) -> a * b * c)
+    & L.find ((== 2020) . sum)
+    <&> product
   where
     options = do
       (i, x) <- zip [0 ..] input
@@ -49,7 +49,7 @@ solve2 input =
       guard (i /= j)
       guard (i /= k)
       guard (j /= k)
-      return (x, y, z)
+      return [x, y, z]
 
 main = do
   input <- readFile "Practice/inputs/Y2020D01.txt"
