@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if [ $# -eq 0 ]; then
-  day="$(date '+%d' | sed 's/^0*//' | xargs printf '%02d')"
+  day="$(TZ='Europe/Tallinn' date '+%d' | sed 's/^0*//' | xargs printf '%02d')"
 
   echo "Creating code file ..."
   cp DayXX.hs "Day${day}.hs"
@@ -11,7 +11,7 @@ if [ $# -eq 0 ]; then
 
   echo "Waiting for input .."
   mkdir -p inputs
-  if [ $(date '+%H') -ge 7 ]; then
+  if [ "$(TZ='Europe/Tallinn' date '+%H')" -ge 7 ]; then
     aocdl -output "inputs/Day${day}.txt"
   else
     aocdl -output "inputs/Day${day}.txt" -wait
@@ -21,7 +21,7 @@ if [ $# -eq 0 ]; then
   ghcid --test='main' -W -c "stack ghci --ghc-options='-w' Day${day}.hs"
 elif [ $# -eq 2 ]; then
   year="$1"
-  day="$(printf '%02d' $2)"
+  day="$(printf '%02d' "$2")"
   name="Y${year}D${day}"
 
   echo "Creating code file ..."
