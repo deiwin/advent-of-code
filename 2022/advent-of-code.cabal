@@ -11,6 +11,7 @@ build-type:     Simple
 library
   exposed-modules:
       DayXX
+      Practice.Y2021D01
   other-modules:
       Paths_advent_of_code
   hs-source-dirs:
