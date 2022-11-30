@@ -16,13 +16,10 @@ library
   hs-source-dirs:
       ./
   default-extensions:
-      BangPatterns
       LambdaCase
       PartialTypeSignatures
       RecordWildCards
       OverloadedStrings
-      TupleSections
-      ScopedTypeVariables
   ghc-options: -W
   build-depends:
       HUnit
@@ -36,4 +33,4 @@ library
     , pqueue
     , text
     , vector
-  default-language: Haskell2010
+  default-language: GHC2021

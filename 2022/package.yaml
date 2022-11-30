@@ -15,26 +15,18 @@ dependencies:
 ghc-options:
 - -W
 default-extensions:
-- BangPatterns
 - LambdaCase
 - PartialTypeSignatures
 - RecordWildCards
 - OverloadedStrings
-- TupleSections
-- ScopedTypeVariables
 
 # - BlockArguments
 # - DataKinds
-# - DeriveGeneric
-# - FlexibleContexts
 # - GADTs
-# - PolyKinds
-# - RankNTypes
-# - ScopedTypeVariables
 # - TemplateHaskell
-# - TypeApplications
 # - TypeFamilies
-# - TypeOperators
 
 library:
   source-dirs: .
+
+language: GHC2021
