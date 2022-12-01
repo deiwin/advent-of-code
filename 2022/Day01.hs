@@ -9,18 +9,13 @@ import Test.HUnit.Text (runTestTT)
 import Text.ParserCombinators.ReadP qualified as P
 
 parse :: String -> [[Int]]
-parse input = run $ do
-  elves <- calories `P.sepBy` (eol *> eol)
-  eol *> P.eof
-  return elves
+parse input = run parser
   where
-    -- Standard parsers
+    parser = calories `P.sepBy` (eol *> eol) <* eol <* P.eof
     calories = number `P.sepBy1` eol
-    number :: P.ReadP Int
     number = read <$> P.munch1 C.isDigit
     eol = P.char '\n'
     run p = fullMatch $ P.readP_to_S p input
-    fullMatch :: [(a, [b])] -> a
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: [[Int]] -> Int
