@@ -78,13 +78,21 @@ parse input = run $ do
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
 solve1 :: _
-solve1 input = input
+solve1 input =
+  input
+
+solve2 :: _
+solve2 input =
+  input
 
 main = do
   input <- readFile "inputs/DayXX.txt"
   -- exampleInput <- readFile "inputs/DayXX_example.txt"
   print $ solve1 $ parse input
+  -- print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       1 @?= 2
       1 @?= 1
+      -- solve1 (parse input) @?= 2
+      -- solve2 (parse input) @?= 1
