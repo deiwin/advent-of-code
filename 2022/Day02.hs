@@ -43,6 +43,11 @@ succ' x
   | maxBound == x = minBound
   | otherwise = succ x
 
+pred' :: (Eq a, Enum a, Bounded a) => a -> a
+pred' x
+  | minBound == x = maxBound
+  | otherwise = pred x
+
 outcomeScore :: (Hand, Hand) -> Int
 outcomeScore (x, y)
   | succ' y == x = 0 -- loss
@@ -60,12 +65,9 @@ solve1 input =
 
 updateHand :: (Hand, Hand) -> (Hand, Hand)
 updateHand = \case
-  (x, Rock) -> (x, findForResult x 0)
+  (x, Rock) -> (x, pred' x)
   (x, Paper) -> (x, x)
-  (x, Scissors) -> (x, findForResult x 6)
-  where
-    findForResult x s = fromJust $ L.find (\y -> outcomeScore (x, y) == s) allHands
-    allHands = [minBound .. maxBound]
+  (x, Scissors) -> (x, succ' x)
 
 solve2 :: [(Hand, Hand)] -> Int
 solve2 input =
