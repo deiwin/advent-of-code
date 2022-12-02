@@ -39,17 +39,16 @@ handScore = \case
   Paper -> 2
   Scissors -> 3
 
+succ' :: (Eq a, Enum a, Bounded a) => a -> a
+succ' x
+  | maxBound == x = minBound
+  | otherwise = succ x
+
 outcomeScore :: (Hand, Hand) -> Int
-outcomeScore = \case
-  (x, y) | x == y -> tie
-  (Rock, Scissors) -> loss
-  (Scissors, Paper) -> loss
-  (Paper, Rock) -> loss
-  _ -> win
-  where
-    loss = 0
-    tie = 3
-    win = 6
+outcomeScore (x, y)
+  | succ' y == x = 0 -- loss
+  | x == y = 3 -- tie
+  | otherwise = 6 -- win
 
 score :: (Hand, Hand) -> Int
 score round@(_, hand) = handScore hand + outcomeScore round
