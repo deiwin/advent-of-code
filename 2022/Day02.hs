@@ -19,7 +19,6 @@ parse input = run $ pair `P.endBy1` eol
       a <- opponent <* P.char ' '
       b <- self
       return (a, b)
-    -- Standard parsers
     self =
       P.char 'X' $> Rock
         <|> P.char 'Y' $> Paper
