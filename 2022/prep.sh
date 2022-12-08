@@ -3,7 +3,11 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if [ $# -eq 0 ]; then
-  day="$(TZ='Europe/Tallinn' date '+%d' | sed 's/^0*//' | xargs printf '%02d')"
+  if [ "$(TZ='America/New_York' date '+%H')" -ge 23 ]; then
+    day="$(TZ='America/New_York' date -v '+1d' '+%d' | sed 's/^0*//' | xargs printf '%02d')"
+  else
+    day="$(TZ='America/New_York' date '+%d' | sed 's/^0*//' | xargs printf '%02d')"
+  fi
 
   echo "Creating code file ..."
   cp DayXX.hs "Day${day}.hs"
@@ -11,10 +15,10 @@ if [ $# -eq 0 ]; then
 
   echo "Waiting for input .."
   mkdir -p inputs
-  if [ "$(TZ='Europe/Tallinn' date '+%H')" -ge 7 ]; then
-    aocdl -output "inputs/Day${day}.txt"
-  else
+  if [ "$(TZ='America/New_York' date '+%H')" -ge 23 ]; then
     aocdl -output "inputs/Day${day}.txt" -wait
+  else
+    aocdl -output "inputs/Day${day}.txt"
   fi
 
   echo "Watching the main function .."
