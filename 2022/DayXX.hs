@@ -12,7 +12,7 @@ import Data.Array.IArray (Array)
 import qualified Data.Array.IArray as A
 import qualified Data.Char as C
 import Data.Function ((&))
-import Data.Functor ((<&>))
+import Data.Functor ((<$), (<&>), ($>))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.IntSet (IntSet)
