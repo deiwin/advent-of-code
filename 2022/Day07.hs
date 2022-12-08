@@ -48,7 +48,7 @@ parse input = run $ logEntry `P.endBy1` eol
     fullMatch = fst . fromJust . L.find (L.null . snd)
 
 filesWithPaths :: [LogEntry] -> Set ([String], Int)
-filesWithPaths = snd . foldl' f ([], S.empty) . drop 1
+filesWithPaths = snd . foldl' f ([], S.empty)
   where
     f (path, files) = \case
       CD ".." -> (drop 1 path, files)
@@ -92,7 +92,7 @@ solve2 input =
       where
         toDelete = 30000000 - freeSpace
         freeSpace = 70000000 - usedSpace
-        usedSpace = m M.! []
+        usedSpace = m M.! ["/"]
 
 main = do
   input <- readFile "inputs/Day07.txt"
