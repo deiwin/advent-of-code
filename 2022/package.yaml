@@ -19,6 +19,8 @@ default-extensions:
 - PartialTypeSignatures
 - RecordWildCards
 - OverloadedStrings
+- OverloadedRecordDot
+- DuplicateRecordFields
 
 # - BlockArguments
 # - DataKinds
