@@ -1,7 +1,7 @@
 module DayXX (main) where
 
 import Control.Applicative (empty, (<|>))
-import Control.Arrow (second, (>>>))
+import Control.Arrow (first, second, (>>>))
 import Control.Monad (guard)
 import Criterion.Main
   ( bench,
