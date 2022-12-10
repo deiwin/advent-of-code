@@ -61,12 +61,16 @@ import qualified Text.ParserCombinators.ReadP as P
 parse :: String -> _
 parse input = run $ do
   word <- P.many1 letter <* P.char ':' <* eol
-  numbers <- number `P.sepBy1` spaces
+  numbers <- signum `P.sepBy1` spaces
   -- eol *> P.eof
   return (word, numbers)
   where
     -- Standard parsers
     letter = P.satisfy C.isLetter
+    signum = do
+      sign <- P.option 1 ((-1) <$ P.char '-')
+      number <- number
+      return (sign * number)
     number :: P.ReadP Int
     number = read <$> P.munch1 C.isDigit
     spaces = P.many1 (P.char ' ')
