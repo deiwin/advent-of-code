@@ -103,8 +103,7 @@ score :: State -> Int
 score =
   M.toList
     >>> fmap (inspectionCount . snd)
-    >>> L.sort
-    >>> reverse
+    >>> L.sortBy (flip compare)
     >>> take 2
     >>> product
 
@@ -120,11 +119,11 @@ solve2 :: [Monkey] -> Int
 solve2 input =
   input
     & toState
-    & L.iterate' (round (`mod` l))
+    & L.iterate' (round (`mod` moduloBase))
     & (L.!! 10000)
     & score
   where
-    l = L.foldl1' lcm (divisibleBy <$> M.elems (toState input))
+    moduloBase = L.foldl1' lcm (divisibleBy <$> input)
 
 main = do
   input <- readFile "inputs/Day11.txt"
