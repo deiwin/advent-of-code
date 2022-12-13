@@ -47,8 +47,7 @@ inOrder = fromJust . go
         where
           lastElem
             | length l == length r = Nothing
-            | length l < length r = Just True
-            | otherwise = Just False
+            | otherwise = Just (length l < length r)
 
 solve1 :: [Pair] -> Int
 solve1 input =
