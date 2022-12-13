@@ -18,10 +18,7 @@ type Pair = (Tree, Tree)
 parse :: String -> [Pair]
 parse input = run $ pair `P.sepBy` P.count 2 eol <* eol
   where
-    pair = do
-      first <- tree <* eol
-      second <- tree
-      return (first, second)
+    pair = (,) <$> (tree <* eol) <*> tree
     tree = Tree <$> P.between (P.char '[') (P.char ']') (elem `P.sepBy` P.char ',')
     elem = tree <|> Leaf <$> number
     -- Standard parsers
