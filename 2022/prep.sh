@@ -22,7 +22,7 @@ if [ $# -eq 0 ]; then
   fi
 
   echo "Watching the main function .."
-  ghcid --test='main' -W -c "stack ghci --ghc-options='-w' Day${day}.hs"
+  ghcid --test='main' -W -c "stack ghci --ghc-options='-w +RTS -N8 -RTS' Day${day}.hs"
 elif [ $# -eq 1 ]; then
   day="$(printf '%02d' "$1")"
 
@@ -35,7 +35,7 @@ elif [ $# -eq 1 ]; then
   aocdl -output "inputs/Day${day}.txt"
 
   echo "Watching the main function .."
-  ghcid --test='main' -W -c "stack ghci --ghc-options='-w' Day${day}.hs"
+  ghcid --test='main' -W -c "stack ghci --ghc-options='-w +RTS -N8 -RTS' Day${day}.hs"
 elif [ $# -eq 2 ]; then
   year="$1"
   day="$(printf '%02d' "$2")"
@@ -52,7 +52,7 @@ elif [ $# -eq 2 ]; then
   aocdl -output "Practice/inputs/${name}.txt" -day "$day" -year "$year"
 
   echo "Watching the main function .."
-  ghcid --test='main' -W -c "stack ghci --ghc-options='-w' Practice/${name}.hs"
+  ghcid --test='main' -W -c "stack ghci --ghc-options='-w +RTS -N8 -RTS' Practice/${name}.hs"
 else
   echo "I don't understand" >&2
   exit 1

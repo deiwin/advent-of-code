@@ -3,20 +3,22 @@ module Day19 (main) where
 import Control.Applicative (empty, (<|>))
 import Control.Arrow (first, second, (>>>))
 import Control.Monad (guard)
+import Control.Monad.Memo (MemoT, MonadMemo, for2, memo, memol0, memol1, startEvalMemo, startEvalMemoT)
 import Criterion.Main
   ( bench,
     defaultMain,
     whnf,
   )
 import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
-import qualified Data.Char as C
+import Data.Array.IArray qualified as A
+import Data.Char qualified as C
 import Data.Function ((&))
-import Data.Functor ((<$), (<&>), ($>))
+import Data.Functor (($>), (<$), (<&>))
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
+import Data.IntMap qualified as IM
 import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
+import Data.IntSet qualified as IS
 import Data.Ix
   ( inRange,
     range,
@@ -27,9 +29,9 @@ import Data.List
     isPrefixOf,
     iterate,
   )
-import qualified Data.List as L
+import Data.List qualified as L
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Data.Maybe
   ( catMaybes,
     fromJust,
@@ -41,11 +43,13 @@ import Data.Sequence
     (<|),
     (|>),
   )
-import qualified Data.Sequence as Seq
+import Data.Sequence qualified as Seq
 import Data.Set (Set)
-import qualified Data.Set as S
+import Data.Set qualified as S
+import Data.Tree (Tree (..))
+import Data.Tree qualified as T
 import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
+import Data.Vector.Unboxed qualified as VU
 import Data.Void (Void)
 import Debug.Trace
   ( traceShow,
@@ -56,9 +60,8 @@ import Linear.V3 (V3 (..))
 import Linear.V4 (V4 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import qualified Text.ParserCombinators.ReadP as P
-import Control.Monad.Memo (MemoT, MonadMemo, for2, memo, startEvalMemoT, startEvalMemo, memol0, memol1)
-import Data.Functor.Identity (Identity)
+import Text.ParserCombinators.ReadP qualified as P
+import Control.Parallel.Strategies (using, rseq, rdeepseq, parTraversable)
 
 data Resource = Ore | Clay | Obsidian | Geode
   deriving (Eq, Show, Ord)
@@ -81,7 +84,8 @@ parse input = run $ blueprint `P.endBy` eol
     blueprint =
       Blueprint
         <$> (P.string "Blueprint " *> number <* P.string ": ")
-        <*> (robot `P.sepBy` P.string ". ") <* P.char '.'
+        <*> (robot `P.sepBy` P.string ". ")
+        <* P.char '.'
     robot =
       Robot
         <$> (P.string "Each " *> resource <* P.string " robot costs ")
@@ -104,66 +108,103 @@ parse input = run $ blueprint `P.endBy` eol
 -- qualityLevel bp = maxGeodes * bp.id
 
 type Income = Map Resource Int
+
 type Stash = Map Resource Int
 
-type Memo0 = MemoT (Int, (Income, Stash)) Stash
-type Memo1 = MemoT Stash [[Robot]]
-type MemoAll = Memo0 (Memo1 Identity)
+data State = State
+  { timeLeft :: Int,
+    income :: Income,
+    stash :: Stash
+  }
+  deriving (Eq, Show)
+
+trigNum :: Int -> Int
+trigNum n = (n * (n + 1)) `div` 2
 
 maxGeodes :: Blueprint -> _
--- maxGeodes bp = geodeCount $ go 24 (M.singleton Ore 1) M.empty
-maxGeodes bp = startEvalMemo $ startEvalMemoT $ go 24 (M.singleton Ore 1, M.empty)
+maxGeodes bp =
+  tree
+    & prune overprovisioned
+    & pruneWithAcc impossible (resourceCount Geode . stash) max
+    -- & fmap (resourceCount Obsidian . stash)
+    & fmap snd
+    & (`using` parTraversable rseq)
+    & maximum
   where
-    go :: Int -> (Income, Stash) -> MemoAll Stash
-    go timeLeft (income, stash)
-      | traceShow (timeLeft, stash) False = undefined
-      | timeLeft == 0 = return stash
-      | otherwise = L.maximumBy (comparing geodeCount) <$> options
+    impossible :: (State, Int) -> Bool
+    impossible (State{..}, maxSeen) = maxPossible < maxSeen
       where
-        options = do
-          x <- justMine
-          xs <- buildRobotOptions
-          return (x:xs)
-        justMine = for2 memol0 go (timeLeft - 1) (income, M.unionWith (+) income stash)
-        buildRobotOptions = do
-          possibleRobots <- recPossibleRobots stash
-          mapM (for2 memol0 go (timeLeft - 1) . second (M.unionWith (+) income) . buildRobots (income, stash)) possibleRobots
+        maxPossible =
+          resourceCount Geode stash
+            + (resourceCount Geode income * timeLeft)
+            + trigNum timeLeft
+    tree :: Tree State
+    tree = unfoldTreeDF (\s -> (s, succ s)) initialState
+    -- tree = T.unfoldTree (\s -> (s, succ s)) initialState
+    initialState = State 19 (M.singleton Ore 1) M.empty
+    succ :: State -> [State]
+    succ State {timeLeft = 0} = []
+    succ s = afterMining : otherOptions
+      where
+        afterMining =
+          s
+            { timeLeft = s.timeLeft - 1,
+              stash = M.unionWith (+) s.income s.stash
+            }
+        otherOptions = buildRobot s <$> possibleRobots
           where
-            recPossibleRobots :: Stash -> MemoAll [[Robot]]
-            recPossibleRobots stash =
-              possibleRobots
-                & mapM f
-                & fmap concat
-              where
-                f robot = do
-                  xss <- memol1 recPossibleRobots (buildRobot stash robot)
-                  case xss of
-                    [] -> return [[robot]]
-                    xss -> return ((robot:) <$> xss)
-                possibleRobots :: [Robot]
-                possibleRobots = filter (canBuildRobot stash) bp.robots
-        buildRobots :: (Income, Stash) -> [Robot] -> (Income, Stash)
-        buildRobots (income, stash) robots = (newIncome, newStash)
+            possibleRobots :: [Robot]
+            possibleRobots = filter canBuildRobot bp.robots
+        buildRobot :: State -> Robot -> State
+        buildRobot s robot =
+          robot.cost
+            & foldl' (\stash (resource, cost) -> M.update (\x -> Just (x - cost)) resource stash) s.stash
+            & update
           where
-            newStash = foldl' buildRobot stash robots
-            newIncome =
-              robots
-                <&> ((,1) . minedResource)
-                & M.fromListWith (+)
-                & M.unionWith (+) income
-        buildRobot :: Stash -> Robot -> Stash
-        buildRobot stash robot =
+            update stash =
+              State
+                { timeLeft = s.timeLeft - 1,
+                  income = M.insertWith (+) robot.minedResource 1 s.income,
+                  stash = M.unionWith (+) s.income stash
+                }
+        canBuildRobot :: Robot -> Bool
+        canBuildRobot robot =
           robot.cost
-            & foldl' (\stash (resource, cost) -> M.update (\x -> Just (x - cost)) resource stash) stash
-        canBuildRobot :: Stash -> Robot -> Bool
-        canBuildRobot stash robot =
-          robot.cost
-            & all (\(resource, cost) -> resourceCount resource stash >= cost)
+            & all (\(resource, cost) -> resourceCount resource s.stash >= cost)
+    label :: Tree a -> a
+    label (Node a _) = a
+    prune :: (a -> Bool) -> Tree a -> Tree a
+    prune p = T.foldTree f
+      where
+        f a ts = Node a (filter (not . p . label) ts)
+    pruneWithAcc :: ((a, s) -> Bool) -> (a -> s) -> (s -> s -> s) -> Tree a -> Tree (a, s)
+    pruneWithAcc p sForA combine = T.foldTree f
+      where
+        f a ts = Node (a, reduce (snd . label <$> ts)) (filter (not . p . label) ts)
+          where
+            reduce = foldl' combine $ sForA a
+    -- pruneWithAcc :: ((a, s) -> Bool) -> (a -> s) -> (s -> s -> s) -> Tree a -> (Tree a, s)
+    -- pruneWithAcc p sForA combine = T.foldTree f
+    --   where
+    --     f :: a -> [(Tree a, s)] -> (Tree a, s)
+    --     f a ts = (Node a (filter (not . p . first label) ts), reduce (snd <$> ts))
+    --       where
+    --         reduce = foldl' combine $ sForA a
+    overprovisioned :: State -> Bool
+    overprovisioned State {income} = f Ore || f Clay || f Obsidian
+      where
+        f r = M.findWithDefault 0 r income > g r
+        g r =
+          bp.robots
+            & concatMap cost
+            & filter ((== r) . fst)
+            <&> snd
+            & maximum
+    unfoldTreeDF :: (b -> (a, [b])) -> b -> Tree a
+    unfoldTreeDF f = runIdentity . T.unfoldTreeM (return . f)
+
     resourceCount :: Resource -> Map Resource Int -> Int
     resourceCount = M.findWithDefault 0
-    geodeCount :: Map Resource Int -> Int
-    geodeCount = resourceCount Geode
-
 
 solve1 :: _
 solve1 input =
@@ -184,5 +225,6 @@ main = do
     TestCase $ do
       1 @?= 2
       1 @?= 1
-      -- solve1 (parse input) @?= 2
-      -- solve2 (parse input) @?= 1
+
+-- solve1 (parse input) @?= 2
+-- solve2 (parse input) @?= 1
