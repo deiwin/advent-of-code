@@ -1,7 +1,9 @@
 module Day19 (main) where
 
-import Control.Applicative (empty, (<|>))
+import Data.Tuple (swap)
+import Control.Applicative (empty, (<|>), liftA2)
 import Control.Arrow (first, second, (>>>))
+import Data.Bifunctor (bimap)
 import Control.Monad (guard)
 import Criterion.Main
   ( bench,
@@ -106,40 +108,65 @@ parse input = run $ blueprint `P.endBy` eol
 type Income = Map Resource Int
 type Stash = Map Resource Int
 
-type Memo0 = MemoT (Int, (Income, Stash)) Stash
-type Memo1 = MemoT Stash [[Robot]]
-type MemoAll = Memo0 (Memo1 Identity)
+type Memo0 = MemoT (Int, Income) (Income, Stash)
+type Memo1 = MemoT Stash (Set (Income, Stash))
+type Memo = Memo0 (Memo1 Identity)
 
 maxGeodes :: Blueprint -> _
 -- maxGeodes bp = geodeCount $ go 24 (M.singleton Ore 1) M.empty
-maxGeodes bp = startEvalMemo $ startEvalMemoT $ go 24 (M.singleton Ore 1, M.empty)
+maxGeodes bp = startEvalMemo $ startEvalMemoT $ go 12 (M.singleton Ore 1)
   where
-    go :: Int -> (Income, Stash) -> MemoAll Stash
-    go timeLeft (income, stash)
-      | traceShow (timeLeft, stash) False = undefined
-      | timeLeft == 0 = return stash
-      | otherwise = L.maximumBy (comparing geodeCount) <$> options
+    go :: Int -> Income -> Memo (Income, Stash)
+    go timeLeft income
+      -- | traceShow (timeLeft, income) False = undefined
+      | timeLeft == 0 = return (income, M.empty)
+      -- | timeLeft == 1 = return (income, income)
+      -- | otherwise = traceShowId <$> bestOption
+      | otherwise = bestOption
+      -- | otherwise = L.maximumBy (comparing (geodeCount . snd)) <$> options
+      -- | otherwise = (,) <$> newIncome <*> newStash
       where
-        options = do
-          x <- justMine
-          xs <- buildRobotOptions
-          return (x:xs)
-        justMine = for2 memol0 go (timeLeft - 1) (income, M.unionWith (+) income stash)
+        -- prev = for2 memol0 go (timeLeft - 1) income
+        -- newStash = uncurry (M.unionWith (+)) <$> prev
+        -- newIncome :: Memo Income
+        -- newIncome = L.maximumBy (comparing geodeCount) <$> incomeOptions
+        -- incomeOptions :: Memo [Income]
+        -- incomeOptions = undefined
+        bestOption :: Memo (Income, Stash)
+        bestOption = L.maximumBy (comparing f) <$> options
+          where f = bimap geodeCount geodeCount . swap
+        options :: Memo [(Income, Stash)]
+        options = justMine <:> buildRobotOptions
+          where a <:> b = liftA2 (:) a b
+        justMine :: Memo (Income, Stash)
+        justMine =
+          for2 memol0 go (timeLeft - 1) income
+            <&> (\(income, stash) -> (income, M.unionWith (+) income stash))
+        buildRobotOptions :: Memo [(Income, Stash)]
         buildRobotOptions = do
-          possibleRobots <- recPossibleRobots stash
-          mapM (for2 memol0 go (timeLeft - 1) . second (M.unionWith (+) income) . buildRobots (income, stash)) possibleRobots
+          (newIncome, newStash) <- for2 memol0 go (timeLeft - 1) income
+          options <- buildOptionsForStash newStash
+          options
+            & S.toList
+            <&> first (M.unionWith (+) newIncome)
+            -- <&> bimap (M.unionWith (+) newIncome) (M.unionWith (+) newIncome)
+            & return
           where
-            recPossibleRobots :: Stash -> MemoAll [[Robot]]
-            recPossibleRobots stash =
+            buildOptionsForStash :: Stash -> Memo (Set (Income, Stash))
+            buildOptionsForStash stash =
               possibleRobots
-                & mapM f
-                & fmap concat
+                & mapM (f . (\r -> traceShow (r, stash) r))
+                <&> foldl' S.union S.empty
               where
+                f :: Robot -> Memo (Set (Income, Stash))
                 f robot = do
-                  xss <- memol1 recPossibleRobots (buildRobot stash robot)
-                  case xss of
-                    [] -> return [[robot]]
-                    xss -> return ((robot:) <$> xss)
+                  xss <- memol1 buildOptionsForStash newStash
+                  if S.null xss
+                     then return $ S.singleton (newIncome, newStash)
+                     else return $ S.map (first (M.unionWith (+) newIncome)) xss
+                  where
+                    newStash = buildRobot stash robot
+                    newIncome = M.singleton robot.minedResource 1
                 possibleRobots :: [Robot]
                 possibleRobots = filter (canBuildRobot stash) bp.robots
         buildRobots :: (Income, Stash) -> [Robot] -> (Income, Stash)
