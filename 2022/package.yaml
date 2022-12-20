@@ -12,6 +12,7 @@ dependencies:
 - monad-memo
 - pqueue
 - parallel
+- ListZipper
 
 ghc-options:
 - -W

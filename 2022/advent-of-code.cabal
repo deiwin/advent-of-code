@@ -29,6 +29,7 @@ library
       Day17
       Day18
       Day19
+      Day20
       DayXX
       Practice.Y2019D01
       Practice.Y2020D01
@@ -47,6 +48,7 @@ library
   ghc-options: -W
   build-depends:
       HUnit
+    , ListZipper
     , array
     , base >=4.7 && <5
     , containers
