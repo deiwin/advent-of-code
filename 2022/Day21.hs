@@ -7,7 +7,7 @@ import Data.Functor ((<&>))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as HM
 import Data.List qualified as L
-import Data.Maybe (fromJust)
+import Data.Maybe (catMaybes, fromJust, listToMaybe)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import Text.ParserCombinators.ReadP qualified as P
@@ -82,23 +82,28 @@ solve1 input =
     & process
     & (HM.! "root")
 
-bSearch :: Int -> Int -> (Int -> Ordering) -> Int
+bSearch :: Int -> Int -> (Int -> Ordering) -> Maybe Int
 bSearch min max p
-  | min >= max = error "not found"
+  | min >= max = Nothing
   | otherwise =
       case p midPoint of
         -- Find the smallest out of multiple fitting values
-        EQ
-          | p (midPoint - 1) == EQ -> bSearch min midPoint p
-          | otherwise -> midPoint
+        EQ ->
+          [ bSearch 0 (midPoint `div` 100) p,
+            bSearch 0 (midPoint `div` 10) p,
+            bSearch min (midPoint - 1) p,
+            Just midPoint
+          ]
+            & catMaybes
+            & listToMaybe
         LT -> bSearch min (midPoint - d) p
         GT -> bSearch (midPoint + d) max p
   where
     d = if max - min == 1 then 1 else 0
     midPoint = ((max - min) `div` 2) + min
 
-solve2 :: [Assignment] -> Int
-solve2 input = bSearch 0 10000000000000 p
+solve2 :: [Assignment] -> Maybe Int
+solve2 input = bSearch 0 maxBound p
   where
     p :: Int -> Ordering
     p x =
@@ -115,4 +120,4 @@ main = do
   runTestTT $
     TestCase $ do
       solve1 (parse input) @?= 256997859093114
-      solve2 (parse input) @?= 3952288690726
+      solve2 (parse input) @?= Just 3952288690726
