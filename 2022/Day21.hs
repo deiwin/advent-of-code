@@ -60,10 +60,7 @@ loeb :: Functor f => f (f a -> a) -> f a
 loeb x = go where go = fmap ($ go) x
 
 process :: HashMap String Value -> HashMap String Int
-process input =
-  input
-    <&> toField
-    & loeb
+process input = loeb (toField <$> input)
   where
     toField (Val x) _ = x
     toField op m = (m HM.! op.lhs) `f` (m HM.! op.rhs)
