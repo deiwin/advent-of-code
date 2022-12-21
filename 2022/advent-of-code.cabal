@@ -30,6 +30,7 @@ library
       Day18
       Day19
       Day20
+      Day21
       DayXX
       Practice.Y2019D01
       Practice.Y2020D01
@@ -59,5 +60,6 @@ library
     , parallel
     , pqueue
     , text
+    , unordered-containers
     , vector
   default-language: GHC2021

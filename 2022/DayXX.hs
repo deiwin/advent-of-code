@@ -30,6 +30,8 @@ import Data.List
 import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict qualified as HM
 import Data.Maybe
   ( catMaybes,
     fromJust,

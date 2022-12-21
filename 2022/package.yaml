@@ -5,6 +5,7 @@ dependencies:
 - text
 - array
 - containers
+- unordered-containers
 - vector
 - megaparsec
 - linear
