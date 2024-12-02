@@ -7,26 +7,22 @@ import Data.List qualified as L
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 
-parse :: String -> [(Int, Int)]
-parse input = (\[a, b] -> (a, b)) . fmap read . words <$> lines input
+parse :: String -> [[Int]]
+parse input = fmap read . words <$> lines input
 
-solve1 :: [(Int, Int)] -> Int
+solve1 :: [[Int]] -> Int
 solve1 input =
   zipWith (\a b -> abs (a - b)) as bs
     & sum
   where
-    as = L.sort $ fst <$> input
-    bs = L.sort $ snd <$> input
+    [as, bs] = L.sort <$> L.transpose input
 
-solve2 :: [(Int, Int)] -> Int
+solve2 :: [[Int]] -> Int
 solve2 input =
-  sum (as <&> \a -> a * IM.findWithDefault 0 a bs)
+  sum (as <&> \a -> a * IM.findWithDefault 0 a bMap)
   where
-    as = L.sort $ fst <$> input
-    bs =
-      input
-        <&> (,1) . snd
-        & IM.fromListWith (+)
+    [as, bs] = L.transpose input
+    bMap = IM.fromListWith (+) $ (,1) <$> bs
 
 main = do
   input <- readFile "inputs/Day01.txt"
