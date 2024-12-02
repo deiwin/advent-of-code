@@ -1,26 +1,12 @@
 module Day02 (main) where
 
-import Data.Char qualified as C
 import Data.Function ((&))
 import Data.List qualified as L
-import Data.Maybe (fromJust)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import Text.ParserCombinators.ReadP qualified as P
 
 parse :: String -> [[Int]]
-parse input = run $ do
-  numbers <- (number `P.sepBy1` spaces) `P.sepBy1` eol
-  eol *> P.eof
-  return numbers
-  where
-    number :: P.ReadP Int
-    number = read <$> P.munch1 C.isDigit
-    spaces = P.many1 (P.char ' ')
-    eol = P.char '\n'
-    run p = fullMatch $ P.readP_to_S p input
-    fullMatch :: [(a, [b])] -> a
-    fullMatch = fst . fromJust . L.find (L.null . snd)
+parse input = fmap read . words <$> lines input
 
 safe :: [Int] -> Bool
 safe xs =
