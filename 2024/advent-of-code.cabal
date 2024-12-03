@@ -37,6 +37,7 @@ library
     , megaparsec
     , monad-memo
     , parallel
+    , parser-combinators
     , pqueue
     , text
     , unordered-containers

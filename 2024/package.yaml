@@ -8,6 +8,7 @@ dependencies:
 - unordered-containers
 - vector
 - megaparsec
+- parser-combinators
 - linear
 - criterion
 - monad-memo

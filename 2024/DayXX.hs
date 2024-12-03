@@ -59,6 +59,7 @@ import Linear.V4 (V4 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
 import qualified Text.ParserCombinators.ReadP as P
+import Control.Monad.Combinators qualified as PC
 
 parse :: String -> _
 parse input = run $ do
