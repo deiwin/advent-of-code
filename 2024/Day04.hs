@@ -1,26 +1,15 @@
 module Day04 (main) where
 
 import Data.Array.IArray qualified as A
-import Data.Char qualified as C
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Ix (inRange, range)
-import Data.List qualified as L
-import Data.Maybe (fromJust)
 import Linear.V2 (V2 (..))
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import Text.ParserCombinators.ReadP qualified as P
 
 parse :: String -> [[Char]]
-parse input = run $ (P.many1 letter `P.endBy1` eol) <* P.eof
-  where
-    -- Standard parsers
-    letter = P.satisfy C.isLetter
-    eol = P.char '\n'
-    run p = fullMatch $ P.readP_to_S p input
-    fullMatch :: [(a, [b])] -> a
-    fullMatch = fst . fromJust . L.find (L.null . snd)
+parse = lines
 
 type Coord = V2 Int
 
