@@ -18,6 +18,7 @@ library
       Day06
       Day07
       Day08
+      Day09
       DayXX
   other-modules:
       Paths_advent_of_code
