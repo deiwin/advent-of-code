@@ -15,6 +15,7 @@ dependencies:
 - pqueue
 - parallel
 - ListZipper
+- fgl
 
 ghc-options:
 - -W
