@@ -29,6 +29,7 @@ library
       Day17
       Day18
       Day19
+      Day23
       DayXX
   other-modules:
       Paths_advent_of_code
