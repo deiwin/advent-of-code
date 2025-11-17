@@ -58,48 +58,25 @@ move1 =
     V2 0 (-1)
   ]
 
-move2 :: [Coord]
-move2 =
-  [a + b | a <- move1, b <- move1]
-    & filter (/= V2 0 0)
-    & L.nub
-
-move20 :: [Coord]
-move20 = foldl' go [V2 0 0] [1 .. 20]
+cheats :: Int -> [Coord] -> [Int]
+cheats maxCheatDist track = concat $ zipWith go track (drop 1 $ L.tails track)
   where
-    go acc _ =
-      [a + b | a <- acc, b <- move1]
-        & (++ acc)
-        & filter (/= V2 0 0)
-        & L.nub
-
-cheats :: [Coord] -> Grid -> [Coord] -> [(Coord, Coord, Int)]
-cheats moves grid track = concatMap cheatsFor track
-  where
-    cheatsFor from =
-      possibleCheats from
-        <&> (\to -> (from, to, benefit from to))
-    trackM = M.fromList $ zip track [0 ..]
-    possibleCheats c =
-      moves
-        <&> (+ c)
-        & filter (inRange (A.bounds grid))
-        & filter isOpen
-        & L.nub
-    isOpen c = (grid A.! c) `elem` [Open, End]
-    benefit from to = trackM M.! to - trackM M.! from - manhattan (from - to)
+    go :: Coord -> [Coord] -> [Int]
+    go from rest =
+      zip rest [1 ..]
+        & fmap (\(to, originalDist) -> (originalDist, manhattan (to - from)))
+        & filter (\(_, mDist) -> mDist <= maxCheatDist)
+        & fmap (uncurry (-))
+        & filter (> 0)
 
 manhattan :: V2 Int -> Int
 manhattan = sum . fmap abs
 
-thd :: (a, b, c) -> c
-thd (_, _, x) = x
-
 solve1 :: [[Char]] -> Int
 solve1 input =
   track grid start
-    & cheats move2 grid
-    & filter ((>= 100) . thd)
+    & cheats 2
+    & filter (>= 100)
     & length
   where
     (grid, start) = readInput input
@@ -107,8 +84,8 @@ solve1 input =
 solve2 :: [[Char]] -> Int
 solve2 input =
   track grid start
-    & cheats move20 grid
-    & filter ((>= 100) . thd)
+    & cheats 20
+    & filter (>= 100)
     & length
   where
     (grid, start) = readInput input
