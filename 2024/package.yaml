@@ -16,6 +16,8 @@ dependencies:
 - parallel
 - ListZipper
 - fgl
+- random
+- graphviz
 
 ghc-options:
 - -W

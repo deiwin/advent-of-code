@@ -33,6 +33,7 @@ library
       Day21
       Day22
       Day23
+      Day24
       Day25
       DayXX
   other-modules:
@@ -56,12 +57,14 @@ library
     , containers
     , criterion
     , fgl
+    , graphviz
     , linear
     , megaparsec
     , monad-memo
     , parallel
     , parser-combinators
     , pqueue
+    , random
     , text
     , unordered-containers
     , vector
