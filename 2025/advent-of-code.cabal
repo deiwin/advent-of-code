@@ -1,0 +1,44 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           advent-of-code
+version:        0.0.0
+build-type:     Simple
+
+library
+  exposed-modules:
+      DayXX
+  other-modules:
+      Paths_advent_of_code
+  hs-source-dirs:
+      ./
+  default-extensions:
+      PartialTypeSignatures
+      RecordWildCards
+      OverloadedStrings
+      OverloadedRecordDot
+      DuplicateRecordFields
+  ghc-options: -W
+  build-depends:
+      HUnit
+    , ListZipper
+    , array
+    , base >=4.7 && <5
+    , containers
+    , criterion
+    , fgl
+    , graphviz
+    , linear
+    , megaparsec
+    , monad-memo
+    , parallel
+    , parser-combinators
+    , pqueue
+    , random
+    , text
+    , unordered-containers
+    , vector
+  default-language: GHC2024

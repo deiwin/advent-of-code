@@ -1,0 +1,38 @@
+name: advent-of-code
+dependencies:
+- base >= 4.7 && < 5
+- HUnit
+- text
+- array
+- containers
+- unordered-containers
+- vector
+- megaparsec
+- parser-combinators
+- linear
+- criterion
+- monad-memo
+- pqueue
+- parallel
+- ListZipper
+- fgl
+- random
+- graphviz
+
+ghc-options:
+- -W
+default-extensions:
+- PartialTypeSignatures
+- RecordWildCards
+- OverloadedStrings
+- OverloadedRecordDot
+- DuplicateRecordFields
+
+# - BlockArguments
+# - TemplateHaskell
+# - TypeFamilies
+
+library:
+  source-dirs: .
+
+language: GHC2024
