@@ -10,6 +10,7 @@ build-type:     Simple
 
 library
   exposed-modules:
+      Day01
       DayXX
       Practice.Y2023D01
   other-modules:
