@@ -38,38 +38,22 @@ isRepeating x
     halfSize = digitCount x `div` 2
     (firstHalf, secondHalf) = x `divMod` (10 ^ halfSize)
 
-nextRepeatingN :: Int -> Int -> Int
-nextRepeatingN n x
-  | size `mod` n /= 0 = repeatN
-  | shouldRepeatFirstPart = unparts partSize $ take n $ repeat $ head parts
-  | otherwise = unparts (digitCount (head parts + 1)) $ take n $ repeat (head parts + 1)
+nextRepeating :: Int -> Int
+nextRepeating x
+  | odd size = 10 ^ size + (10 ^ (size `div` 2))
+  | secondHalf < firstHalf = (firstHalf * (10 ^ halfSize)) + firstHalf
+  | otherwise = ((firstHalf + 1) * (10 ^ (digitCount (firstHalf + 1)))) + firstHalf + 1
   where
-    partSize = size `div` n
-    repeatN =
-      iterate (\x -> x * (10 ^ (partSize + 1)) + (10 ^ partSize)) (10 ^ partSize)
-        & (!! (n - 1))
-    parts = parts' [] x
-    parts' ps = \case
-      0 -> ps
-      x -> let (d, m) = x `divMod` (10 ^ (size `div` n)) in parts' (m : ps) d
-    unparts partSize = foldr1 (\x acc -> acc * (10 ^ partSize) + x)
-    shouldRepeatFirstPart =
-      case L.find (< (head parts)) (tail parts) of
-        Nothing -> False
-        Just i ->
-          L.find (> (head parts)) (tail parts)
-            <&> (> i)
-            & fromMaybe True
     size = digitCount x
     halfSize = size `div` 2
     (firstHalf, secondHalf) = x `divMod` (10 ^ halfSize)
 
 repeaters :: (Int, Int) -> [Int]
-repeaters range@(from, to) = takeWhile (inRange range) $ iterate (nextRepeatingN 2) start
+repeaters range@(from, to) = takeWhile (inRange range) $ iterate nextRepeating start
   where
     start
       | isRepeating from = from
-      | otherwise = nextRepeatingN 2 from
+      | otherwise = nextRepeating from
 
 solve1 :: [(Int, Int)] -> Int
 solve1 input =
@@ -77,12 +61,7 @@ solve1 input =
     & concatMap repeaters
     & sum
 
-repeaters' :: (Int, Int) -> [Int]
-repeaters' range@(from, to) = takeWhile (inRange range) $ tail $ iterate go (from - 1)
-  where
-    go x = minimum ((\n -> nextRepeatingN n x) <$> (possibleNs x))
-    possibleNs x = 2 : [3 .. (digitCount x)]
-
+parts :: Int -> Int -> [Int]
 parts partCount x = go [] x
   where
     go ps = \case
@@ -113,13 +92,9 @@ main = do
     TestCase $ do
       (digitCount <$> [1, 23, 456]) @?= [1, 2, 3]
       (isRepeating <$> [1, 11, 12, 123123, 1231234]) @?= [False, True, False, True, False]
-      (nextRepeatingN 2 <$> [1, 11, 12, 21, 99, 123, 123123, 1231234])
+      (nextRepeating <$> [1, 11, 12, 21, 99, 123, 123123, 1231234])
         @?= [11, 22, 22, 22, 1010, 1010, 124124, 10001000]
-      (nextRepeatingN 3 <$> [1, 11, 110, 111, 999])
-        @?= [111, 111, 111, 222, 101010]
       repeaters (1, 1234) @?= [11, 22, 33, 44, 55, 66, 77, 88, 99, 1010, 1111, 1212]
-      repeaters' (2, 1234)
-        @?= [11, 22, 33, 44, 55, 66, 77, 88, 99, 1010, 1111, 1212]
       solve1 (parse input) @?= 12599655151
       (isRepeating' <$> [1, 11, 12, 123123, 1231234, 123123123])
         @?= [False, True, False, True, False, True]
