@@ -1,65 +1,14 @@
 module Day02 (main) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Arrow (first, second, (>>>))
-import Control.Monad (guard)
-import Criterion.Main
-  ( bench,
-    defaultMain,
-    whnf,
-  )
-import Data.Array.IArray (Array)
-import qualified Data.Array.IArray as A
-import qualified Data.Char as C
+import Data.Char qualified as C
 import Data.Function ((&))
-import Data.Functor ((<$), (<&>), ($>))
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.IntSet (IntSet)
-import qualified Data.IntSet as IS
-import Data.Ix
-  ( inRange,
-    range,
-  )
-import Data.List
-  ( foldl',
-    foldl1',
-    isPrefixOf,
-    iterate,
-  )
-import qualified Data.List as L
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import Data.HashMap.Strict (HashMap)
-import Data.HashMap.Strict qualified as HM
-import Data.Maybe
-  ( catMaybes,
-    fromJust,
-    isJust,
-  )
-import Data.Ord (comparing)
-import Data.Sequence
-  ( Seq (..),
-    (<|),
-    (|>),
-  )
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Vector.Unboxed (Vector)
-import qualified Data.Vector.Unboxed as VU
-import Data.Void (Void)
-import Debug.Trace
-  ( traceShow,
-    traceShowId,
-  )
-import Linear.V2 (V2 (..))
-import Linear.V3 (V3 (..))
-import Linear.V4 (V4 (..))
+import Data.Functor ((<&>))
+import Data.Ix (inRange, range)
+import Data.List qualified as L
+import Data.Maybe (fromJust, fromMaybe)
 import Test.HUnit.Base (Test (TestCase), (@?=))
 import Test.HUnit.Text (runTestTT)
-import qualified Text.ParserCombinators.ReadP as P
-import Control.Monad.Combinators qualified as PC
+import Text.ParserCombinators.ReadP qualified as P
 
 parse :: String -> [(Int, Int)]
 parse input = run (range `P.sepBy1` P.char ',' <* eol)
@@ -85,48 +34,93 @@ isRepeating :: Int -> Bool
 isRepeating x
   | odd (digitCount x) = False
   | otherwise = firstHalf == secondHalf
-    where
-      halfSize = digitCount x `div` 2
-      (firstHalf, secondHalf) = x `divMod` (10 ^ halfSize)
-
-nextRepeating :: Int -> Int
-nextRepeating x
-  | odd size = 10 ^ size + (10 ^ (size `div` 2))
-  | secondHalf < firstHalf = (firstHalf * (10 ^ halfSize)) + firstHalf
-  | otherwise = ((firstHalf + 1) * (10 ^ (digitCount (firstHalf + 1)))) + firstHalf + 1
   where
+    halfSize = digitCount x `div` 2
+    (firstHalf, secondHalf) = x `divMod` (10 ^ halfSize)
+
+nextRepeatingN :: Int -> Int -> Int
+nextRepeatingN n x
+  | size `mod` n /= 0 = repeatN
+  | shouldRepeatFirstPart = unparts partSize $ take n $ repeat $ head parts
+  | otherwise = unparts (digitCount (head parts + 1)) $ take n $ repeat (head parts + 1)
+  where
+    partSize = size `div` n
+    repeatN =
+      iterate (\x -> x * (10 ^ (partSize + 1)) + (10 ^ partSize)) (10 ^ partSize)
+        & (!! (n - 1))
+    parts = parts' [] x
+    parts' ps = \case
+      0 -> ps
+      x -> let (d, m) = x `divMod` (10 ^ (size `div` n)) in parts' (m : ps) d
+    unparts partSize = foldr1 (\x acc -> acc * (10 ^ partSize) + x)
+    shouldRepeatFirstPart =
+      case L.find (< (head parts)) (tail parts) of
+        Nothing -> False
+        Just i ->
+          L.find (> (head parts)) (tail parts)
+            <&> (> i)
+            & fromMaybe True
     size = digitCount x
     halfSize = size `div` 2
     (firstHalf, secondHalf) = x `divMod` (10 ^ halfSize)
 
 repeaters :: (Int, Int) -> [Int]
-repeaters range@(from, to) = takeWhile (inRange range) $ iterate nextRepeating start
+repeaters range@(from, to) = takeWhile (inRange range) $ iterate (nextRepeatingN 2) start
   where
     start
       | isRepeating from = from
-      | otherwise = nextRepeating from
+      | otherwise = nextRepeatingN 2 from
 
 solve1 :: [(Int, Int)] -> Int
 solve1 input =
   input
-  & concatMap repeaters
-  & sum
+    & concatMap repeaters
+    & sum
 
-solve2 :: _
+repeaters' :: (Int, Int) -> [Int]
+repeaters' range@(from, to) = takeWhile (inRange range) $ tail $ iterate go (from - 1)
+  where
+    go x = minimum ((\n -> nextRepeatingN n x) <$> (possibleNs x))
+    possibleNs x = 2 : [3 .. (digitCount x)]
+
+parts partCount x = go [] x
+  where
+    go ps = \case
+      0 -> ps
+      x -> let (d, m) = x `divMod` (10 ^ partSize) in go (m : ps) d
+    size = digitCount x
+    partSize = size `div` partCount
+
+isRepeating' :: Int -> Bool
+isRepeating' x =
+  [2 .. size]
+    & filter ((== 0) . (size `mod`))
+    & any (allEqual . (`parts` x))
+  where
+    size = digitCount x
+    allEqual (x : xs) = all (== (x)) xs
+    allEqual _ = undefined
+
+solve2 :: [(Int, Int)] -> Int
 solve2 input =
   input
+    & concatMap (filter isRepeating' . range)
+    & sum
 
 main = do
   input <- readFile "inputs/Day02.txt"
-  -- exampleInput <- readFile "inputs/Day02_example.txt"
-  print $ solve1 $ parse input
-  -- print $ solve2 $ parse input
   runTestTT $
     TestCase $ do
       (digitCount <$> [1, 23, 456]) @?= [1, 2, 3]
       (isRepeating <$> [1, 11, 12, 123123, 1231234]) @?= [False, True, False, True, False]
-      (nextRepeating <$> [1, 11, 12, 21, 99, 123, 123123, 1231234])
+      (nextRepeatingN 2 <$> [1, 11, 12, 21, 99, 123, 123123, 1231234])
         @?= [11, 22, 22, 22, 1010, 1010, 124124, 10001000]
-      repeaters (1, 1234) @?= [11, 22, 33, 44, 55, 66, 77 ,88, 99, 1010, 1111, 1212]
+      (nextRepeatingN 3 <$> [1, 11, 110, 111, 999])
+        @?= [111, 111, 111, 222, 101010]
+      repeaters (1, 1234) @?= [11, 22, 33, 44, 55, 66, 77, 88, 99, 1010, 1111, 1212]
+      repeaters' (2, 1234)
+        @?= [11, 22, 33, 44, 55, 66, 77, 88, 99, 1010, 1111, 1212]
       solve1 (parse input) @?= 12599655151
-      -- solve2 (parse input) @?= 1
+      (isRepeating' <$> [1, 11, 12, 123123, 1231234, 123123123])
+        @?= [False, True, False, True, False, True]
+      solve2 (parse input) @?= 20942028255
