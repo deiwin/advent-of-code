@@ -19,6 +19,7 @@ library
       Day07
       Day08
       Day09
+      Day10
       DayXX
       Practice.Y2023D01
   other-modules:
@@ -48,6 +49,7 @@ library
     , parser-combinators
     , pqueue
     , random
+    , sbv
     , text
     , unordered-containers
     , vector
