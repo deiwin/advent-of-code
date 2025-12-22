@@ -32,7 +32,7 @@ elif [ $# -eq 1 ]; then
 
   echo "Waiting for input .."
   mkdir -p inputs
-  aocdl -output "inputs/Day${day}.txt"
+  aocdl -output "inputs/Day${day}.txt" -day "$day"
 
   echo "Watching the main function .."
   ghcid --test='main' -W -c "stack ghci --ghc-options='-w +RTS -N8 -RTS' Day${day}.hs"
